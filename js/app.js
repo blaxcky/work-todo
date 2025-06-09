@@ -9,11 +9,13 @@ class TodoApp {
         ];
         this.searchTerm = '';
         this.isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+        this.currentProjectId = this.projects[0].id;
         this.init();
     }
 
     init() {
         this.applyTheme();
+        this.renderSidebar();
         this.render();
         this.bindEvents();
         this.bindProjectEvents();
@@ -36,7 +38,8 @@ class TodoApp {
         };
         this.projects.push(project);
         this.saveToStorage();
-        this.render();
+        this.renderSidebar();
+        this.switchToProject(project.id);
     }
 
     addTodo(projectId, text, priority = 'medium') {
@@ -89,80 +92,98 @@ class TodoApp {
         }
     }
 
-    render() {
-        const container = document.getElementById('todo-container');
-        container.innerHTML = '';
+    renderSidebar() {
+        const projectList = document.querySelector('.project-list');
+        projectList.innerHTML = '';
 
         this.projects.forEach(project => {
-            const filteredTodos = this.searchTerm 
-                ? project.todos.filter(todo => 
-                    todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()))
-                : project.todos;
+            const projectItem = document.createElement('div');
+            projectItem.className = `project-item ${project.id === this.currentProjectId ? 'active' : ''}`;
+            projectItem.onclick = () => this.switchToProject(project.id);
             
-            // Nur Projekte anzeigen, die Todos enthalten (oder alle wenn keine Suche)
-            if (!this.searchTerm || filteredTodos.length > 0) {
-                const projectEl = document.createElement('div');
-                projectEl.className = 'project-section';
-                
-                projectEl.innerHTML = `
-                <div class="project-header">
-                    <h2 class="project-title">${project.name}</h2>
+            projectItem.innerHTML = `
+                <span class="project-name">${project.name}</span>
+                ${project.id !== 'default' ? `
                     <div class="project-actions">
-                        <button class="add-todo-btn" onclick="app.showAddTodoForm('${project.id}')">
-                            + Todo hinzufügen
-                        </button>
-                        ${project.id !== 'default' ? `
-                            <button class="btn-small btn-edit" onclick="app.showEditProjectForm('${project.id}')">
-                                Umbenennen
-                            </button>
-                            <button class="btn-small btn-delete" onclick="app.deleteProject('${project.id}')">
-                                Projekt löschen
-                            </button>
-                        ` : ''}
+                        <button class="btn-small btn-edit" onclick="event.stopPropagation(); app.showEditProjectForm('${project.id}')">✏️</button>
+                        <button class="btn-small btn-delete" onclick="event.stopPropagation(); app.deleteProject('${project.id}')">🗑️</button>
                     </div>
-                </div>
-                <div id="add-form-${project.id}" style="display: none;">
-                    <div class="input-group">
-                        <input type="text" id="todo-text-${project.id}" placeholder="Todo-Text eingeben...">
-                    </div>
-                    <div class="input-group">
-                        <select id="todo-priority-${project.id}">
+                ` : ''}
+            `;
+            
+            projectList.appendChild(projectItem);
+        });
+    }
+
+    switchToProject(projectId) {
+        this.currentProjectId = projectId;
+        this.renderSidebar();
+        this.render();
+        this.updatePageTitle();
+    }
+
+    updatePageTitle() {
+        const project = this.projects.find(p => p.id === this.currentProjectId);
+        const titleElement = document.getElementById('current-project-title');
+        if (project && titleElement) {
+            titleElement.textContent = project.name;
+        }
+    }
+
+    render() {
+        const container = document.getElementById('todo-container');
+        const currentProject = this.projects.find(p => p.id === this.currentProjectId);
+        
+        if (!currentProject) {
+            container.innerHTML = '<div class="no-results">Projekt nicht gefunden</div>';
+            return;
+        }
+
+        const filteredTodos = this.searchTerm 
+            ? currentProject.todos.filter(todo => 
+                todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()))
+            : currentProject.todos;
+
+        container.innerHTML = `
+            <div class="project-section">
+                <div class="add-todo-form">
+                    <div class="input-row">
+                        <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input">
+                        <select id="todo-priority-${currentProject.id}" class="priority-select">
                             <option value="low">Niedrig</option>
                             <option value="medium" selected>Mittel</option>
                             <option value="high">Hoch</option>
                         </select>
+                        <button onclick="app.submitTodo('${currentProject.id}')" class="add-btn">+</button>
                     </div>
-                    <button onclick="app.submitTodo('${project.id}')" class="add-todo-btn">Hinzufügen</button>
-                    <button onclick="app.hideAddTodoForm('${project.id}')" class="btn-small">Abbrechen</button>
                 </div>
                 <div class="todos-list">
-                    ${filteredTodos.map(todo => `
+                    ${filteredTodos.length > 0 ? filteredTodos.map(todo => `
                         <div class="todo-item" data-todo-id="${todo.id}">
                             <input type="checkbox" class="todo-checkbox" 
                                    ${todo.completed ? 'checked' : ''} 
-                                   onchange="app.toggleTodo('${project.id}', '${todo.id}')">
+                                   onchange="app.toggleTodo('${currentProject.id}', '${todo.id}')">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             <span class="todo-priority priority-${todo.priority}">${this.getPriorityText(todo.priority)}</span>
                             <div class="todo-actions">
-                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${project.id}', '${todo.id}')">
+                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${currentProject.id}', '${todo.id}')">
                                     Bearbeiten
                                 </button>
-                                <button class="btn-small btn-delete" onclick="app.deleteTodo('${project.id}', '${todo.id}')">
+                                <button class="btn-small btn-delete" onclick="app.deleteTodo('${currentProject.id}', '${todo.id}')">
                                     Löschen
                                 </button>
                             </div>
                         </div>
-                    `).join('')}
+                    `).join('') : '<div class="no-todos">Noch keine Todos in diesem Projekt</div>'}
                 </div>
-            `;
-            
-                container.appendChild(projectEl);
-            }
-        });
+            </div>
+        `;
         
-        if (this.searchTerm && container.children.length === 0) {
-            container.innerHTML = '<div class="no-results">Keine Todos gefunden für "' + this.searchTerm + '"</div>';
+        if (this.searchTerm && filteredTodos.length === 0 && currentProject.todos.length > 0) {
+            container.querySelector('.todos-list').innerHTML = '<div class="no-results">Keine Todos gefunden für "' + this.searchTerm + '"</div>';
         }
+
+        this.updatePageTitle();
     }
 
     getPriorityText(priority) {
@@ -198,15 +219,6 @@ class TodoApp {
         this.search('');
     }
 
-    showAddTodoForm(projectId) {
-        document.getElementById(`add-form-${projectId}`).style.display = 'block';
-        document.getElementById(`todo-text-${projectId}`).focus();
-    }
-
-    hideAddTodoForm(projectId) {
-        document.getElementById(`add-form-${projectId}`).style.display = 'none';
-        document.getElementById(`todo-text-${projectId}`).value = '';
-    }
 
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
@@ -215,7 +227,8 @@ class TodoApp {
         const text = textInput.value.trim();
         if (text) {
             this.addTodo(projectId, text, prioritySelect.value);
-            this.hideAddTodoForm(projectId);
+            textInput.value = '';
+            prioritySelect.value = 'medium';
         }
     }
 
@@ -283,7 +296,14 @@ class TodoApp {
         const project = this.projects.find(p => p.id === projectId);
         if (project && confirm(`Projekt "${project.name}" wirklich löschen? Alle Todos gehen verloren.`)) {
             this.projects = this.projects.filter(p => p.id !== projectId);
+            
+            // Wenn aktuelles Projekt gelöscht wird, zum ersten Projekt wechseln
+            if (this.currentProjectId === projectId) {
+                this.currentProjectId = this.projects[0].id;
+            }
+            
             this.saveToStorage();
+            this.renderSidebar();
             this.render();
         }
     }
@@ -296,7 +316,8 @@ class TodoApp {
         if (newName && newName.trim() !== project.name) {
             project.name = newName.trim();
             this.saveToStorage();
-            this.render();
+            this.renderSidebar();
+            this.updatePageTitle();
         }
     }
 
@@ -308,6 +329,14 @@ class TodoApp {
         document.getElementById('project-name-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.submitProject();
+            }
+        });
+
+        // Event listener für alle Todo-Eingabefelder
+        document.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('todo-input') && e.key === 'Enter') {
+                const projectId = e.target.id.replace('todo-text-', '');
+                this.submitTodo(projectId);
             }
         });
 
@@ -346,9 +375,6 @@ class TodoApp {
     bindEvents() {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                this.projects.forEach(project => {
-                    this.hideAddTodoForm(project.id);
-                });
                 this.hideAddProjectForm();
             }
         });
