@@ -14,22 +14,41 @@ Todos sollen in Projekte organisiert werden können.
 - [x] Responsive UI/UX Design implementieren
 - [x] Grundfunktionalität: Todo erstellen, löschen, abhaken
 - [x] Prioritäten-System implementiert
+- [x] GitHub Pages Setup und Deployment-Pipeline
+- [x] Todo-Bearbeitung (Edit-Funktion)
+- [x] Neue Projekte hinzufügen
+- [x] Projekt-Management (umbenennen/löschen)
+- [x] Suchfunktion mit Highlighting
+- [x] Dark/Light Mode Toggle
 
-## Geplante Features
+## Nächste Aufgaben
+- [ ] Repository auf GitHub erstellen und Code pushen
+- [ ] GitHub Pages aktivieren
+
+## Implementierte Features ✅
 
 - [x] Todo erstellen, bearbeiten, löschen
-- [ ] Projekte erstellen und Todos zuordnen (neue Projekte hinzufügen)
+- [x] Projekte erstellen und Todos zuordnen
 - [x] Todo-Status (offen, erledigt)
-- [ ] Drag & Drop für Todo-Reihenfolge
-- [ ] Suchfunktion für Todos
+- [x] Suchfunktion für Todos mit Highlighting
 - [x] Prioritäten für Todos (hoch, mittel, niedrig)
+- [x] Dark/Light Mode Toggle
+- [x] Todo bearbeiten (Edit-Funktion)
+- [x] Projekt löschen/umbenennen
+- [x] Responsive Design
+- [x] LocalStorage Persistierung
+- [x] GitHub Pages Deployment
+
+## Zukünftige Features 🚀
+
+- [ ] Drag & Drop für Todo-Reihenfolge
 - [ ] Due Dates für Todos
 - [ ] Tags/Labels für bessere Organisation
-- [ ] Dark/Light Mode Toggle
 - [ ] Datenexport (JSON, CSV)
-- [ ] Todo bearbeiten (Edit-Funktion)
-- [ ] Projekt löschen/umbenennen
 - [ ] Todo-Statistiken anzeigen
+- [ ] Keyboard Shortcuts
+- [ ] Todo-Kategorien/Farben
+- [ ] Benachrichtigungen für Deadlines
 
 ## Technische Schulden
 
@@ -53,9 +72,23 @@ Todos sollen in Projekte organisiert werden können.
 
 ### Starten der Anwendung
 ```bash
+npm install
 npm run dev
 ```
 Läuft auf: http://localhost:5173/
+
+### Deployment auf GitHub Pages
+1. Repository auf GitHub erstellen
+2. Code pushen:
+```bash
+git add .
+git commit -m "Complete todo app with all features"
+git branch -M main
+git remote add origin https://github.com/USERNAME/work-todo.git
+git push -u origin main
+```
+3. In Repository Settings → Pages → Source: "GitHub Actions" auswählen
+4. App läuft automatisch auf: https://USERNAME.github.io/work-todo/
 
 ### Datenstruktur
 ```javascript
@@ -77,3 +110,13 @@ Läuft auf: http://localhost:5173/
   ]
 }
 ```
+
+### Features im Detail
+- **📝 Todo-Management**: Erstellen, bearbeiten, löschen, abhaken
+- **📁 Projekt-Organisation**: Mehrere Projekte mit separaten Todo-Listen
+- **🔍 Suchfunktion**: Live-Suche mit Highlighting der Treffer
+- **🎯 Prioritäten**: Drei Prioritätsstufen (Hoch, Mittel, Niedrig)
+- **🌙 Dark Mode**: Theme-Wechsel mit LocalStorage-Persistierung
+- **📱 Responsive**: Optimiert für Desktop, Tablet und Mobile
+- **💾 Persistierung**: Automatisches Speichern in LocalStorage
+- **⌨️ Keyboard Support**: ESC zum Abbrechen, Enter zum Bestätigen
