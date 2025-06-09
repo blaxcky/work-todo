@@ -10,8 +10,23 @@
     <div id="app">
         <header>
             <h1>Todo App</h1>
+            <button id="theme-toggle" class="theme-toggle" title="Themes wechseln">🌙</button>
         </header>
         <main>
+            <div class="project-controls">
+                <div class="controls-row">
+                    <button id="add-project-btn" class="add-project-btn">+ Neues Projekt</button>
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Todos durchsuchen..." class="search-input">
+                        <button id="clear-search" class="btn-small" style="display: none;">✕</button>
+                    </div>
+                </div>
+                <div id="add-project-form" style="display: none;">
+                    <input type="text" id="project-name-input" placeholder="Projektname eingeben...">
+                    <button onclick="app.submitProject()" class="add-todo-btn">Erstellen</button>
+                    <button onclick="app.hideAddProjectForm()" class="btn-small">Abbrechen</button>
+                </div>
+            </div>
             <div id="todo-container">
                 <!-- Todo content wird hier eingefügt -->
             </div>
