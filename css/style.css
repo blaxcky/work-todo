@@ -188,6 +188,22 @@ body {
     gap: 8px;
 }
 
+.archive-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.archive-btn:hover {
+    background: #8e44ad;
+}
+
 .import-btn {
     background: #3498db;
     color: white;
@@ -1020,6 +1036,81 @@ body.dark-theme .btn-primary:hover {
     background: #2980b9;
 }
 
+/* Dark Theme Archive */
+body.dark-theme .archive-btn {
+    background: #9b59b6;
+}
+
+body.dark-theme .archive-btn:hover {
+    background: #8e44ad;
+}
+
+body.dark-theme .archive-info p {
+    color: #e0e0e0;
+}
+
+body.dark-theme .archive-warning {
+    background: #3a3a3a;
+    border-color: #555;
+    color: #f39c12;
+}
+
+body.dark-theme .btn-danger {
+    background: #e74c3c;
+}
+
+body.dark-theme .btn-danger:hover {
+    background: #c0392b;
+}
+
+/* Dark Theme Special Projects */
+body.dark-theme .project-item.special-project {
+    background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+    border-left-color: #95a5a6;
+}
+
+body.dark-theme .project-item.special-project:hover {
+    background: linear-gradient(135deg, #404040 0%, #3a3a3a 100%);
+}
+
+body.dark-theme .project-item.special-project.active {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-left-color: #1abc9c;
+}
+
+body.dark-theme .project-separator {
+    background: #555;
+}
+
+body.dark-theme .todo-count {
+    background: #95a5a6;
+}
+
+body.dark-theme .archive-empty {
+    color: #aaa;
+}
+
+body.dark-theme .archive-empty h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .archive-info-banner {
+    background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+    border-left-color: #9b59b6;
+}
+
+body.dark-theme .archive-banner-text h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .archive-banner-text p {
+    color: #aaa;
+}
+
+body.dark-theme .original-project {
+    color: #aaa;
+}
+
 body.dark-theme .project-header {
     border-bottom-color: #555;
 }
@@ -1274,4 +1365,152 @@ body.dark-theme .project-header {
 
 .btn-primary:hover {
     background: #2980b9;
+}
+
+/* Archive Modal Styles */
+.archive-modal-content {
+    max-width: 450px;
+}
+
+.archive-info {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.archive-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.archive-info p {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    color: #2c3e50;
+}
+
+.archive-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.9rem;
+    color: #856404;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.archive-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+/* Special Projects Styling */
+.project-item.special-project {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 3px solid #6c757d;
+    font-weight: 500;
+}
+
+.project-item.special-project:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+
+.project-item.special-project.active {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border-left-color: #1abc9c;
+}
+
+.project-separator {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 8px 16px;
+}
+
+.todo-count {
+    background: #6c757d;
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+.project-item.special-project.active .todo-count {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Archive Project Styles */
+.archive-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #7f8c8d;
+}
+
+.archive-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.archive-empty h3 {
+    margin-bottom: 12px;
+    color: #2c3e50;
+}
+
+.archive-info-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #9b59b6;
+}
+
+.archive-banner-icon {
+    font-size: 2.5rem;
+}
+
+.archive-banner-text h3 {
+    margin: 0 0 4px 0;
+    color: #2c3e50;
+    font-size: 1.3rem;
+}
+
+.archive-banner-text p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.todo-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.original-project {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-style: italic;
 }

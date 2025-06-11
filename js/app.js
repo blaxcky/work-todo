@@ -117,16 +117,37 @@ class TodoApp {
         const projectList = document.querySelector('.project-list');
         projectList.innerHTML = '';
 
-        // Alle Projekte Kategorie hinzufügen
+        // Spezial-Projekte Sektion
         const allProjectsItem = document.createElement('div');
-        allProjectsItem.className = `project-item ${this.currentProjectId === 'all' ? 'active' : ''}`;
+        allProjectsItem.className = `project-item special-project ${this.currentProjectId === 'all' ? 'active' : ''}`;
         allProjectsItem.onclick = () => this.switchToProject('all');
         allProjectsItem.innerHTML = `
             <span class="project-name">📋 Alle Projekte</span>
         `;
         projectList.appendChild(allProjectsItem);
 
-        this.projects.forEach(project => {
+        // Archiv-Projekt nur anzeigen wenn es existiert und Todos hat
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        if (archiveProject && archiveProject.todos.length > 0) {
+            const archiveItem = document.createElement('div');
+            archiveItem.className = `project-item special-project ${this.currentProjectId === 'archive' ? 'active' : ''}`;
+            archiveItem.onclick = () => this.switchToProject('archive');
+            archiveItem.innerHTML = `
+                <span class="project-name">📦 Archiv</span>
+                <span class="todo-count">${archiveProject.todos.length}</span>
+            `;
+            projectList.appendChild(archiveItem);
+        }
+
+        // Trennlinie zwischen Spezial- und normalen Projekten
+        if (this.projects.filter(p => p.id !== 'archive').length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'project-separator';
+            projectList.appendChild(separator);
+        }
+
+        // Normale Projekte (ohne Archiv)
+        this.projects.filter(project => project.id !== 'archive').forEach(project => {
             const projectItem = document.createElement('div');
             projectItem.className = `project-item ${project.id === this.currentProjectId ? 'active' : ''}`;
             projectItem.onclick = () => this.switchToProject(project.id);
@@ -157,6 +178,8 @@ class TodoApp {
         if (titleElement) {
             if (this.currentProjectId === 'all') {
                 titleElement.textContent = 'Alle Projekte';
+            } else if (this.currentProjectId === 'archive') {
+                titleElement.textContent = 'Archiv';
             } else {
                 const project = this.projects.find(p => p.id === this.currentProjectId);
                 if (project) {
@@ -171,6 +194,8 @@ class TodoApp {
         
         if (this.currentProjectId === 'all') {
             this.renderAllProjects(container);
+        } else if (this.currentProjectId === 'archive') {
+            this.renderArchiveProject(container);
         } else {
             this.renderSingleProject(container);
         }
@@ -318,6 +343,68 @@ class TodoApp {
         container.innerHTML = html;
     }
 
+    renderArchiveProject(container) {
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        
+        if (!archiveProject || archiveProject.todos.length === 0) {
+            container.innerHTML = `
+                <div class="project-section">
+                    <div class="archive-empty">
+                        <div class="archive-empty-icon">📦</div>
+                        <h3>Archiv ist leer</h3>
+                        <p>Verwenden Sie den "Archivieren" Button, um erledigte Todos hierher zu verschieben.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const filteredTodos = this.searchTerm 
+            ? archiveProject.todos.filter(todo => 
+                todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+                (todo.originalProject && todo.originalProject.toLowerCase().includes(this.searchTerm.toLowerCase())))
+            : archiveProject.todos;
+
+        const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
+
+        container.innerHTML = `
+            <div class="project-section">
+                <div class="archive-info-banner">
+                    <div class="archive-banner-icon">📦</div>
+                    <div class="archive-banner-text">
+                        <h3>Archiv</h3>
+                        <p>Alle archivierten Todos • ${archiveProject.todos.length} Einträge</p>
+                    </div>
+                </div>
+                <div class="todos-list">
+                    ${sortedTodos.length > 0 ? sortedTodos.map(todo => `
+                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority}" data-todo-id="${todo.id}">
+                            <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
+                                   ${todo.completed ? 'checked' : ''} 
+                                   onchange="app.toggleTodo('archive', '${todo.id}')">
+                            <div class="todo-content">
+                                <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                                ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
+                            </div>
+                            <div class="todo-actions">
+                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('archive', '${todo.id}')">
+                                    Bearbeiten
+                                </button>
+                                <button class="btn-small btn-delete" onclick="app.deleteTodo('archive', '${todo.id}')">
+                                    Löschen
+                                </button>
+                            </div>
+                        </div>
+                    `).join('') : '<div class="no-todos">Keine Todos im Archiv gefunden</div>'}
+                </div>
+            </div>
+        `;
+        
+        if (this.searchTerm && sortedTodos.length === 0 && archiveProject.todos.length > 0) {
+            container.querySelector('.todos-list').innerHTML = '<div class="no-results">Keine Archiv-Todos gefunden für "' + this.searchTerm + '"</div>';
+        }
+    }
+
     getPriorityText(priority) {
         const priorities = {
             low: 'Niedrig',
@@ -456,7 +543,7 @@ class TodoApp {
     }
 
     deleteProject(projectId) {
-        if (projectId === 'default') return;
+        if (projectId === 'default' || projectId === 'archive') return;
         
         const project = this.projects.find(p => p.id === projectId);
         if (project && confirm(`Projekt "${project.name}" wirklich löschen? Alle Todos gehen verloren.`)) {
@@ -474,6 +561,8 @@ class TodoApp {
     }
 
     showEditProjectForm(projectId) {
+        if (projectId === 'archive') return; // Archiv kann nicht umbenannt werden
+        
         const project = this.projects.find(p => p.id === projectId);
         if (!project) return;
         
@@ -517,6 +606,10 @@ class TodoApp {
             this.toggleTheme();
         });
 
+        document.getElementById('archive-btn').addEventListener('click', () => {
+            this.showArchiveModal();
+        });
+
         document.getElementById('export-btn').addEventListener('click', () => {
             this.showExportModal();
         });
@@ -540,6 +633,12 @@ class TodoApp {
         document.getElementById('import-modal').addEventListener('click', (e) => {
             if (e.target.id === 'import-modal') {
                 this.hideImportModal();
+            }
+        });
+
+        document.getElementById('archive-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'archive-modal') {
+                this.hideArchiveModal();
             }
         });
 
@@ -581,6 +680,14 @@ class TodoApp {
 
         document.getElementById('import-confirm').addEventListener('click', () => {
             this.confirmImport();
+        });
+
+        document.getElementById('archive-cancel').addEventListener('click', () => {
+            this.hideArchiveModal();
+        });
+
+        document.getElementById('archive-confirm').addEventListener('click', () => {
+            this.confirmArchive();
         });
     }
 
@@ -633,6 +740,23 @@ class TodoApp {
     hideAllModals() {
         this.hideExportModal();
         this.hideImportModal();
+        this.hideArchiveModal();
+    }
+
+    showArchiveModal() {
+        const completedCount = this.countCompletedTodos();
+        if (completedCount === 0) {
+            alert('Keine erledigten Todos zum Archivieren gefunden.');
+            return;
+        }
+        
+        document.getElementById('archive-count-text').textContent = 
+            `${completedCount} erledigte Todo${completedCount === 1 ? '' : 's'} werden in das Projekt "Archiv" verschoben.`;
+        document.getElementById('archive-modal').style.display = 'flex';
+    }
+
+    hideArchiveModal() {
+        document.getElementById('archive-modal').style.display = 'none';
     }
 
     resetImportModal() {
@@ -883,6 +1007,63 @@ class TodoApp {
                 this.projects.push(importedProject);
             }
         });
+    }
+
+    countCompletedTodos() {
+        let count = 0;
+        this.projects.forEach(project => {
+            count += project.todos.filter(todo => todo.completed).length;
+        });
+        return count;
+    }
+
+    confirmArchive() {
+        const archiveProject = this.getOrCreateArchiveProject();
+        let movedCount = 0;
+
+        // Gehe durch alle Projekte und verschiebe erledigte Todos
+        this.projects.forEach(project => {
+            if (project.id === archiveProject.id) return; // Skip das Archiv-Projekt selbst
+            
+            const completedTodos = project.todos.filter(todo => todo.completed);
+            const remainingTodos = project.todos.filter(todo => !todo.completed);
+            
+            // Füge erledigte Todos zum Archiv hinzu
+            completedTodos.forEach(todo => {
+                // Füge Projektinformation zum Todo hinzu
+                todo.originalProject = project.name;
+                todo.archivedAt = new Date();
+                archiveProject.todos.push(todo);
+                movedCount++;
+            });
+            
+            // Behalte nur die nicht erledigten Todos im ursprünglichen Projekt
+            project.todos = remainingTodos;
+        });
+
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+        this.hideArchiveModal();
+        
+        alert(`${movedCount} erledigte Todo${movedCount === 1 ? '' : 's'} wurden ins Archiv verschoben.`);
+    }
+
+    getOrCreateArchiveProject() {
+        // Suche nach existierendem Archiv-Projekt
+        let archiveProject = this.projects.find(p => p.id === 'archive');
+        
+        if (!archiveProject) {
+            // Erstelle neues Archiv-Projekt
+            archiveProject = {
+                id: 'archive',
+                name: 'Archiv',
+                todos: []
+            };
+            this.projects.push(archiveProject);
+        }
+        
+        return archiveProject;
     }
 }
 

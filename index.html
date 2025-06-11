@@ -34,6 +34,7 @@
                         <button id="clear-search" class="btn-small" style="display: none;">✕</button>
                     </div>
                     <div class="import-export-buttons">
+                        <button id="archive-btn" class="archive-btn">📦 Archivieren</button>
                         <button id="import-btn" class="import-btn">📤 Import</button>
                         <button id="export-btn" class="export-btn">📥 Export</button>
                     </div>
@@ -106,6 +107,29 @@
                             <button id="import-cancel" class="btn-secondary">Abbrechen</button>
                             <button id="import-confirm" class="btn-primary">Importieren</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Archive Confirmation Modal -->
+        <div id="archive-modal" class="modal" style="display: none;">
+            <div class="modal-content archive-modal-content">
+                <div class="modal-header">
+                    <h3>Erledigte Todos archivieren</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="archive-info">
+                        <div class="archive-icon">📦</div>
+                        <p id="archive-count-text">Alle erledigten Todos werden in das Projekt "Archiv" verschoben.</p>
+                        <div class="archive-warning">
+                            ⚠️ Diese Aktion kann nicht rückgängig gemacht werden.
+                        </div>
+                    </div>
+                    <div class="archive-actions">
+                        <button id="archive-cancel" class="btn-secondary">Abbrechen</button>
+                        <button id="archive-confirm" class="btn-danger">Archivieren</button>
                     </div>
                 </div>
             </div>
