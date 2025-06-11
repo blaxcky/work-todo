@@ -458,13 +458,78 @@ body {
     border-color: #3498db;
 }
 
-.priority-select {
-    padding: 12px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    background: white;
-    min-width: 100px;
-    font-size: 1rem;
+.priority-radio-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.priority-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.priority-radio:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.radio-input {
+    display: none;
+}
+
+.radio-custom {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.radio-custom.priority-high {
+    border-color: #e74c3c;
+}
+
+.radio-custom.priority-medium {
+    border-color: #f39c12;
+}
+
+.radio-custom.priority-low {
+    border-color: #27ae60;
+}
+
+.radio-input:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.radio-input:checked + .radio-custom.priority-high::after {
+    background-color: #e74c3c;
+}
+
+.radio-input:checked + .radio-custom.priority-medium::after {
+    background-color: #f39c12;
+}
+
+.radio-input:checked + .radio-custom.priority-low::after {
+    background-color: #27ae60;
+}
+
+.radio-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #666;
 }
 
 .add-btn {
@@ -741,6 +806,15 @@ body.dark-theme .todo-input:focus {
 
 body.dark-theme .todo-input::placeholder {
     color: #aaa;
+}
+
+/* Dark Theme Radio Buttons */
+body.dark-theme .priority-radio:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .radio-label {
+    color: #ccc;
 }
 
 /* Dark Theme Sidebar */

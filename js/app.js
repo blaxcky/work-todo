@@ -198,11 +198,23 @@ class TodoApp {
                 <div class="add-todo-form">
                     <div class="input-row">
                         <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input">
-                        <select id="todo-priority-${currentProject.id}" class="priority-select">
-                            <option value="low">Niedrig</option>
-                            <option value="medium" selected>Mittel</option>
-                            <option value="high">Hoch</option>
-                        </select>
+                        <div class="priority-radio-group">
+                            <label class="priority-radio">
+                                <input type="radio" name="priority-${currentProject.id}" value="high" class="radio-input">
+                                <span class="radio-custom priority-high"></span>
+                                <span class="radio-label">Hoch</span>
+                            </label>
+                            <label class="priority-radio">
+                                <input type="radio" name="priority-${currentProject.id}" value="medium" class="radio-input" checked>
+                                <span class="radio-custom priority-medium"></span>
+                                <span class="radio-label">Mittel</span>
+                            </label>
+                            <label class="priority-radio">
+                                <input type="radio" name="priority-${currentProject.id}" value="low" class="radio-input">
+                                <span class="radio-custom priority-low"></span>
+                                <span class="radio-label">Niedrig</span>
+                            </label>
+                        </div>
                         <button onclick="app.submitTodo('${currentProject.id}')" class="add-btn">+</button>
                     </div>
                 </div>
@@ -363,21 +375,23 @@ class TodoApp {
 
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
-        const prioritySelect = document.getElementById(`todo-priority-${projectId}`);
+        const priorityRadios = document.querySelectorAll(`input[name="priority-${projectId}"]:checked`);
         
         const text = textInput.value.trim();
+        const priority = priorityRadios.length > 0 ? priorityRadios[0].value : 'medium';
+        
         if (text) {
-            this.addTodo(projectId, text, prioritySelect.value);
+            this.addTodo(projectId, text, priority);
             // Nach dem Re-Rendering die neuen Elemente finden und Fokus setzen
             setTimeout(() => {
                 const newTextInput = document.getElementById(`todo-text-${projectId}`);
-                const newPrioritySelect = document.getElementById(`todo-priority-${projectId}`);
+                const newPriorityRadio = document.querySelector(`input[name="priority-${projectId}"][value="medium"]`);
                 if (newTextInput) {
                     newTextInput.value = '';
                     newTextInput.focus();
                 }
-                if (newPrioritySelect) {
-                    newPrioritySelect.value = 'medium';
+                if (newPriorityRadio) {
+                    newPriorityRadio.checked = true;
                 }
             }, 0);
         }
