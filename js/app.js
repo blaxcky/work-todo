@@ -516,6 +516,72 @@ class TodoApp {
         document.getElementById('theme-toggle').addEventListener('click', () => {
             this.toggleTheme();
         });
+
+        document.getElementById('export-btn').addEventListener('click', () => {
+            this.showExportModal();
+        });
+
+        document.getElementById('import-btn').addEventListener('click', () => {
+            this.showImportModal();
+        });
+
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.hideAllModals();
+            });
+        });
+
+        document.getElementById('export-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'export-modal') {
+                this.hideExportModal();
+            }
+        });
+
+        document.getElementById('import-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'import-modal') {
+                this.hideImportModal();
+            }
+        });
+
+        document.getElementById('export-json').addEventListener('click', () => {
+            this.exportData('json');
+        });
+
+        document.getElementById('export-csv').addEventListener('click', () => {
+            this.exportData('csv');
+        });
+
+        // Import Event Listeners
+        document.querySelector('.file-select-btn').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            this.handleFileSelect(e.target.files[0]);
+        });
+
+        document.getElementById('file-drop-zone').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        });
+
+        document.getElementById('file-drop-zone').addEventListener('dragleave', (e) => {
+            e.currentTarget.classList.remove('drag-over');
+        });
+
+        document.getElementById('file-drop-zone').addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            this.handleFileSelect(e.dataTransfer.files[0]);
+        });
+
+        document.getElementById('import-cancel').addEventListener('click', () => {
+            this.hideImportModal();
+        });
+
+        document.getElementById('import-confirm').addEventListener('click', () => {
+            this.confirmImport();
+        });
     }
 
     toggleTheme() {
@@ -541,6 +607,280 @@ class TodoApp {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.hideAddProjectForm();
+                this.hideAllModals();
+            }
+        });
+    }
+
+    showExportModal() {
+        document.getElementById('export-modal').style.display = 'flex';
+    }
+
+    hideExportModal() {
+        document.getElementById('export-modal').style.display = 'none';
+    }
+
+    showImportModal() {
+        document.getElementById('import-modal').style.display = 'flex';
+        this.resetImportModal();
+    }
+
+    hideImportModal() {
+        document.getElementById('import-modal').style.display = 'none';
+        this.resetImportModal();
+    }
+
+    hideAllModals() {
+        this.hideExportModal();
+        this.hideImportModal();
+    }
+
+    resetImportModal() {
+        document.getElementById('file-input').value = '';
+        document.getElementById('import-options').style.display = 'none';
+        document.querySelector('input[name="import-mode"][value="merge"]').checked = true;
+        this.selectedFile = null;
+    }
+
+    exportData(format) {
+        const timestamp = new Date().toISOString().split('T')[0];
+        let filename, content, mimeType;
+
+        if (format === 'json') {
+            filename = `todos-export-${timestamp}.json`;
+            content = JSON.stringify(this.projects, null, 2);
+            mimeType = 'application/json';
+        } else if (format === 'csv') {
+            filename = `todos-export-${timestamp}.csv`;
+            content = this.generateCSV();
+            mimeType = 'text/csv';
+        }
+
+        // Download-Link erstellen
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.hideExportModal();
+    }
+
+    generateCSV() {
+        const headers = ['Projekt', 'Todo', 'Priorität', 'Status', 'Erstellt am'];
+        const rows = [headers];
+
+        this.projects.forEach(project => {
+            project.todos.forEach(todo => {
+                rows.push([
+                    `"${project.name}"`,
+                    `"${todo.text}"`,
+                    `"${this.getPriorityText(todo.priority)}"`,
+                    `"${todo.completed ? 'Erledigt' : 'Offen'}"`,
+                    `"${new Date(todo.createdAt).toLocaleString('de-DE')}"`
+                ]);
+            });
+        });
+
+        return rows.map(row => row.join(',')).join('\n');
+    }
+
+    handleFileSelect(file) {
+        if (!file) return;
+
+        const allowedTypes = ['application/json', 'text/csv', 'text/plain'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(file.type) && !['json', 'csv'].includes(fileExtension)) {
+            alert('Bitte wählen Sie eine JSON oder CSV Datei aus.');
+            return;
+        }
+
+        this.selectedFile = file;
+        document.getElementById('import-options').style.display = 'block';
+        
+        // Update UI to show selected file
+        const dropZone = document.getElementById('file-drop-zone');
+        dropZone.innerHTML = `
+            <div class="upload-icon">✅</div>
+            <div class="upload-text">
+                <strong>${file.name}</strong><br>
+                <span class="file-size">${this.formatFileSize(file.size)}</span>
+            </div>
+            <div class="upload-hint">Datei ausgewählt</div>
+        `;
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async confirmImport() {
+        if (!this.selectedFile) return;
+
+        const mode = document.querySelector('input[name="import-mode"]:checked').value;
+        
+        try {
+            const content = await this.readFile(this.selectedFile);
+            const fileExtension = this.selectedFile.name.split('.').pop().toLowerCase();
+            
+            let importedData;
+            if (fileExtension === 'json') {
+                importedData = this.parseJSON(content);
+            } else if (fileExtension === 'csv') {
+                importedData = this.parseCSV(content);
+            }
+
+            if (mode === 'replace') {
+                this.projects = importedData;
+            } else { // merge
+                this.mergeData(importedData);
+            }
+
+            this.saveToStorage();
+            this.currentProjectId = this.projects[0]?.id || 'default';
+            this.renderSidebar();
+            this.render();
+            this.hideImportModal();
+            
+            alert(`Daten erfolgreich importiert! ${mode === 'replace' ? 'Ersetzt' : 'Zusammengeführt'}`);
+        } catch (error) {
+            alert(`Fehler beim Importieren: ${error.message}`);
+        }
+    }
+
+    readFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Fehler beim Lesen der Datei'));
+            reader.readAsText(file);
+        });
+    }
+
+    parseJSON(content) {
+        try {
+            const data = JSON.parse(content);
+            
+            // Validate structure
+            if (!Array.isArray(data)) {
+                throw new Error('JSON muss ein Array von Projekten sein');
+            }
+            
+            data.forEach(project => {
+                if (!project.id || !project.name || !Array.isArray(project.todos)) {
+                    throw new Error('Ungültige Projektstruktur in JSON');
+                }
+                
+                project.todos.forEach(todo => {
+                    if (!todo.id || !todo.text || typeof todo.completed !== 'boolean') {
+                        throw new Error('Ungültige Todo-Struktur in JSON');
+                    }
+                    // Ensure createdAt is a proper date
+                    if (!todo.createdAt) {
+                        todo.createdAt = new Date();
+                    } else if (typeof todo.createdAt === 'string') {
+                        todo.createdAt = new Date(todo.createdAt);
+                    }
+                    // Ensure priority exists
+                    if (!todo.priority) {
+                        todo.priority = 'medium';
+                    }
+                });
+            });
+            
+            return data;
+        } catch (error) {
+            throw new Error(`JSON Parse Error: ${error.message}`);
+        }
+    }
+
+    parseCSV(content) {
+        try {
+            const lines = content.split('\n').filter(line => line.trim());
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+            
+            // Check required headers
+            const requiredHeaders = ['Projekt', 'Todo'];
+            if (!requiredHeaders.every(h => headers.includes(h))) {
+                throw new Error('CSV muss mindestens "Projekt" und "Todo" Spalten enthalten');
+            }
+            
+            const projects = {};
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+                const row = {};
+                
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                
+                const projectName = row['Projekt'];
+                const todoText = row['Todo'];
+                
+                if (!projectName || !todoText) continue;
+                
+                if (!projects[projectName]) {
+                    projects[projectName] = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        name: projectName,
+                        todos: []
+                    };
+                }
+                
+                const priority = this.mapPriorityFromText(row['Priorität']) || 'medium';
+                const completed = row['Status'] === 'Erledigt';
+                
+                projects[projectName].todos.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    text: todoText,
+                    completed: completed,
+                    priority: priority,
+                    createdAt: new Date()
+                });
+            }
+            
+            return Object.values(projects);
+        } catch (error) {
+            throw new Error(`CSV Parse Error: ${error.message}`);
+        }
+    }
+
+    mapPriorityFromText(priorityText) {
+        if (!priorityText) return 'medium';
+        const lower = priorityText.toLowerCase();
+        if (lower.includes('hoch') || lower.includes('high')) return 'high';
+        if (lower.includes('niedrig') || lower.includes('low')) return 'low';
+        return 'medium';
+    }
+
+    mergeData(importedData) {
+        importedData.forEach(importedProject => {
+            const existingProject = this.projects.find(p => p.name === importedProject.name);
+            
+            if (existingProject) {
+                // Add todos to existing project
+                importedProject.todos.forEach(todo => {
+                    // Generate new ID to avoid conflicts
+                    todo.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                    existingProject.todos.push(todo);
+                });
+            } else {
+                // Add new project
+                importedProject.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                importedProject.todos.forEach(todo => {
+                    todo.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                });
+                this.projects.push(importedProject);
             }
         });
     }

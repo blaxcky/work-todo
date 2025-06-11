@@ -169,12 +169,55 @@ body {
     gap: 20px;
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
 .search-container {
     display: flex;
     align-items: center;
     gap: 8px;
     flex: 1;
     max-width: 300px;
+}
+
+.import-export-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.import-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.import-btn:hover {
+    background: #2980b9;
+}
+
+.export-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.export-btn:hover {
+    background: #219a52;
 }
 
 .search-input {
@@ -264,7 +307,7 @@ body {
 }
 
 .todo-item.priority-low {
-    border-left-color: #27ae60;
+    border-left-color: #3498db;
 }
 
 .todo-item.completed {
@@ -310,7 +353,7 @@ body {
 
 /* Custom Checkbox Styling */
 .todo-checkbox {
-    margin-right: 12px;
+    margin-right: 16px;
     width: 20px;
     height: 20px;
     cursor: pointer;
@@ -333,7 +376,7 @@ body {
 }
 
 .todo-checkbox.priority-low {
-    border-color: #27ae60;
+    border-color: #3498db;
 }
 
 .todo-checkbox:hover {
@@ -349,7 +392,7 @@ body {
 }
 
 .todo-checkbox.priority-low:hover {
-    border-color: #229954;
+    border-color: #2980b9;
 }
 
 .todo-checkbox:checked {
@@ -368,8 +411,8 @@ body {
 }
 
 .todo-checkbox.priority-low:checked {
-    background: #27ae60;
-    border-color: #27ae60;
+    background: #3498db;
+    border-color: #3498db;
 }
 
 .todo-checkbox:checked::after {
@@ -386,6 +429,7 @@ body {
 .todo-text {
     flex: 1;
     font-size: 1rem;
+    margin-right: 16px;
 }
 
 .todo-text.completed {
@@ -500,7 +544,7 @@ body {
 }
 
 .radio-custom.priority-low {
-    border-color: #27ae60;
+    border-color: #3498db;
 }
 
 .radio-input:checked + .radio-custom::after {
@@ -523,7 +567,7 @@ body {
 }
 
 .radio-input:checked + .radio-custom.priority-low::after {
-    background-color: #27ae60;
+    background-color: #3498db;
 }
 
 .radio-label {
@@ -692,7 +736,7 @@ body.dark-theme .todo-item.priority-medium {
 }
 
 body.dark-theme .todo-item.priority-low {
-    border-left-color: #27ae60;
+    border-left-color: #3498db;
 }
 
 body.dark-theme .todo-item.completed {
@@ -757,7 +801,7 @@ body.dark-theme .todo-checkbox.priority-medium {
 }
 
 body.dark-theme .todo-checkbox.priority-low {
-    border-color: #27ae60;
+    border-color: #3498db;
 }
 
 body.dark-theme .todo-checkbox.priority-high:hover {
@@ -769,7 +813,7 @@ body.dark-theme .todo-checkbox.priority-medium:hover {
 }
 
 body.dark-theme .todo-checkbox.priority-low:hover {
-    border-color: #229954;
+    border-color: #2980b9;
 }
 
 body.dark-theme .todo-checkbox.priority-high:checked {
@@ -783,8 +827,8 @@ body.dark-theme .todo-checkbox.priority-medium:checked {
 }
 
 body.dark-theme .todo-checkbox.priority-low:checked {
-    background: #27ae60;
-    border-color: #27ae60;
+    background: #3498db;
+    border-color: #3498db;
 }
 
 /* Dark Theme Todo Form */
@@ -853,6 +897,381 @@ body.dark-theme .main-header h1 {
     color: #e0e0e0;
 }
 
+body.dark-theme .export-btn {
+    background: #27ae60;
+}
+
+body.dark-theme .export-btn:hover {
+    background: #219a52;
+}
+
+/* Dark Theme Modal */
+body.dark-theme .modal-content {
+    background: #2d2d2d;
+}
+
+body.dark-theme .modal-header {
+    border-bottom-color: #555;
+}
+
+body.dark-theme .modal-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-close {
+    color: #ccc;
+}
+
+body.dark-theme .modal-close:hover {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-body p {
+    color: #ccc;
+}
+
+body.dark-theme .export-option-btn {
+    background: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-theme .export-option-btn:hover {
+    border-color: #3498db;
+    background: #404040;
+}
+
+body.dark-theme .export-label {
+    color: #e0e0e0;
+}
+
+body.dark-theme .export-desc {
+    color: #aaa;
+}
+
+/* Dark Theme Import Modal */
+body.dark-theme .import-btn {
+    background: #3498db;
+}
+
+body.dark-theme .import-btn:hover {
+    background: #2980b9;
+}
+
+body.dark-theme .file-drop-zone {
+    border-color: #555;
+    background: #3a3a3a;
+}
+
+body.dark-theme .file-drop-zone:hover,
+body.dark-theme .file-drop-zone.drag-over {
+    border-color: #3498db;
+    background: #404040;
+}
+
+body.dark-theme .file-select-btn {
+    color: #3498db;
+}
+
+body.dark-theme .file-select-btn:hover {
+    color: #5dade2;
+}
+
+body.dark-theme .upload-hint,
+body.dark-theme .file-size {
+    color: #aaa;
+}
+
+body.dark-theme .import-options {
+    border-top-color: #555;
+}
+
+body.dark-theme .radio-option {
+    border-color: #555;
+    background: #3a3a3a;
+}
+
+body.dark-theme .radio-option:hover {
+    border-color: #3498db;
+    background: #404040;
+}
+
+body.dark-theme .radio-text {
+    color: #e0e0e0;
+}
+
+body.dark-theme .radio-desc {
+    color: #aaa;
+}
+
+body.dark-theme .btn-secondary {
+    background: #7f8c8d;
+}
+
+body.dark-theme .btn-secondary:hover {
+    background: #95a5a6;
+}
+
+body.dark-theme .btn-primary {
+    background: #3498db;
+}
+
+body.dark-theme .btn-primary:hover {
+    background: #2980b9;
+}
+
 body.dark-theme .project-header {
     border-bottom-color: #555;
+}
+
+/* Export Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    min-width: 400px;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.3rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: #f8f9fa;
+    color: #2c3e50;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    margin: 0 0 20px 0;
+    color: #666;
+}
+
+.export-options {
+    display: flex;
+    gap: 16px;
+}
+
+.export-option-btn {
+    flex: 1;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.export-option-btn:hover {
+    border-color: #3498db;
+    background: #f8fffe;
+}
+
+.export-icon {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.export-label {
+    display: block;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.export-desc {
+    display: block;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+}
+
+/* Import Modal Styles */
+.file-upload-area {
+    margin-bottom: 20px;
+}
+
+.file-drop-zone {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+    border-color: #3498db;
+    background: #f8fffe;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+.upload-text {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.file-select-btn {
+    background: none;
+    border: none;
+    color: #3498db;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: inherit;
+}
+
+.file-select-btn:hover {
+    color: #2980b9;
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+}
+
+.file-size {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.import-options {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.import-mode {
+    margin-bottom: 20px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.radio-option:hover {
+    border-color: #3498db;
+    background: #f8fffe;
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    margin-top: 2px;
+}
+
+.radio-text {
+    font-weight: 500;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.radio-desc {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    display: block;
+}
+
+.import-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
 }

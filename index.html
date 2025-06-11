@@ -28,15 +28,88 @@
         <main class="main-content">
             <header class="main-header">
                 <h1 id="current-project-title">Todo App</h1>
-                <div class="search-container">
-                    <input type="text" id="search-input" placeholder="Todos durchsuchen..." class="search-input">
-                    <button id="clear-search" class="btn-small" style="display: none;">✕</button>
+                <div class="header-controls">
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Todos durchsuchen..." class="search-input">
+                        <button id="clear-search" class="btn-small" style="display: none;">✕</button>
+                    </div>
+                    <div class="import-export-buttons">
+                        <button id="import-btn" class="import-btn">📤 Import</button>
+                        <button id="export-btn" class="export-btn">📥 Export</button>
+                    </div>
                 </div>
             </header>
             <div id="todo-container">
                 <!-- Todo content wird hier eingefügt -->
             </div>
         </main>
+        
+        <!-- Export Modal -->
+        <div id="export-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Daten exportieren</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Wählen Sie das Exportformat:</p>
+                    <div class="export-options">
+                        <button id="export-json" class="export-option-btn">
+                            <span class="export-icon">📋</span>
+                            <span class="export-label">JSON</span>
+                            <span class="export-desc">Strukturierte Daten</span>
+                        </button>
+                        <button id="export-csv" class="export-option-btn">
+                            <span class="export-icon">📊</span>
+                            <span class="export-label">CSV</span>
+                            <span class="export-desc">Tabellendaten</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="import-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Daten importieren</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Wählen Sie eine Datei zum Importieren:</p>
+                    <div class="file-upload-area">
+                        <input type="file" id="file-input" accept=".json,.csv" style="display: none;">
+                        <div id="file-drop-zone" class="file-drop-zone">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">
+                                <strong>Datei hier ablegen</strong><br>
+                                oder <button type="button" class="file-select-btn">durchsuchen</button>
+                            </div>
+                            <div class="upload-hint">JSON oder CSV Dateien unterstützt</div>
+                        </div>
+                    </div>
+                    <div id="import-options" class="import-options" style="display: none;">
+                        <div class="import-mode">
+                            <label class="radio-option">
+                                <input type="radio" name="import-mode" value="merge" checked>
+                                <span class="radio-text">📋 Zusammenführen</span>
+                                <span class="radio-desc">Zu bestehenden Daten hinzufügen</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="import-mode" value="replace">
+                                <span class="radio-text">🔄 Ersetzen</span>
+                                <span class="radio-desc">Alle bestehenden Daten überschreiben</span>
+                            </label>
+                        </div>
+                        <div class="import-actions">
+                            <button id="import-cancel" class="btn-secondary">Abbrechen</button>
+                            <button id="import-confirm" class="btn-primary">Importieren</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="js/app.js"></script>
 </body>
