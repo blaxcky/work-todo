@@ -42,7 +42,7 @@ class TodoApp {
         this.switchToProject(project.id);
     }
 
-    addTodo(projectId, text, priority = 'medium') {
+    addTodo(projectId, text, priority = 'medium', dueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = {
@@ -50,6 +50,7 @@ class TodoApp {
                 text: text,
                 completed: false,
                 priority: priority,
+                dueDate: dueDate,
                 createdAt: new Date()
             };
             project.todos.push(todo);
@@ -100,13 +101,14 @@ class TodoApp {
         }
     }
 
-    editTodo(projectId, todoId, newText, newPriority) {
+    editTodo(projectId, todoId, newText, newPriority, newDueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = project.todos.find(t => t.id === todoId);
             if (todo) {
                 todo.text = newText;
                 todo.priority = newPriority;
+                todo.dueDate = newDueDate;
                 this.saveToStorage();
                 this.render();
             }
@@ -223,6 +225,7 @@ class TodoApp {
                 <div class="add-todo-form">
                     <div class="input-row">
                         <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input">
+                        <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)">
                         <div class="priority-radio-group">
                             <label class="priority-radio">
                                 <input type="radio" name="priority-${currentProject.id}" value="high" class="radio-input">
@@ -245,17 +248,20 @@ class TodoApp {
                 </div>
                 <div class="todos-list">
                     ${sortedTodos.length > 0 ? sortedTodos.map(todo => `
-                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority}" data-todo-id="${todo.id}">
+                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
                             <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                    ${todo.completed ? 'checked' : ''} 
                                    onchange="app.toggleTodo('${currentProject.id}', '${todo.id}')">
-                            <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                            <div class="todo-content">
+                                <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                                ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                            </div>
                             <div class="todo-actions">
-                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${currentProject.id}', '${todo.id}')">
-                                    Bearbeiten
+                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${currentProject.id}', '${todo.id}')" title="Bearbeiten">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
-                                <button class="btn-small btn-delete" onclick="app.deleteTodo('${currentProject.id}', '${todo.id}')">
-                                    Löschen
+                                <button class="btn-small btn-delete" onclick="app.deleteTodo('${currentProject.id}', '${todo.id}')" title="Löschen">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 </button>
                             </div>
                         </div>
@@ -319,17 +325,20 @@ class TodoApp {
                         </div>
                         <div class="todos-list">
                             ${projectTodos.map(todo => `
-                                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority}" data-todo-id="${todo.id}">
+                                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
                                     <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                            ${todo.completed ? 'checked' : ''} 
                                            onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
-                                    <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                                    <div class="todo-content">
+                                        <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                                        ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                                    </div>
                                     <div class="todo-actions">
-                                        <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')">
-                                            Bearbeiten
+                                        <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
-                                        <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')">
-                                            Löschen
+                                        <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')" title="Löschen">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                         </button>
                                     </div>
                                 </div>
@@ -378,20 +387,21 @@ class TodoApp {
                 </div>
                 <div class="todos-list">
                     ${sortedTodos.length > 0 ? sortedTodos.map(todo => `
-                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority}" data-todo-id="${todo.id}">
+                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
                             <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                    ${todo.completed ? 'checked' : ''} 
                                    onchange="app.toggleTodo('archive', '${todo.id}')">
                             <div class="todo-content">
                                 <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                                ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
                                 ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
                             </div>
                             <div class="todo-actions">
-                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('archive', '${todo.id}')">
-                                    Bearbeiten
+                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('archive', '${todo.id}')" title="Bearbeiten">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
-                                <button class="btn-small btn-delete" onclick="app.deleteTodo('archive', '${todo.id}')">
-                                    Löschen
+                                <button class="btn-small btn-delete" onclick="app.deleteTodo('archive', '${todo.id}')" title="Löschen">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 </button>
                             </div>
                         </div>
@@ -414,6 +424,41 @@ class TodoApp {
         return priorities[priority] || 'Mittel';
     }
 
+    formatDueDate(dueDate) {
+        if (!dueDate) return '';
+        
+        const date = dueDate instanceof Date ? dueDate : new Date(dueDate);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        // Normalize dates to midnight for comparison
+        const normalizeDate = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const normalizedDate = normalizeDate(date);
+        const normalizedToday = normalizeDate(today);
+        const normalizedTomorrow = normalizeDate(tomorrow);
+        
+        if (normalizedDate.getTime() === normalizedToday.getTime()) {
+            return 'Heute';
+        } else if (normalizedDate.getTime() === normalizedTomorrow.getTime()) {
+            return 'Morgen';
+        } else {
+            return date.toLocaleDateString('de-DE', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+            });
+        }
+    }
+
+    isOverdue(dueDate) {
+        if (!dueDate) return false;
+        const date = dueDate instanceof Date ? dueDate : new Date(dueDate);
+        const today = new Date();
+        const normalizeDate = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        return normalizeDate(date) < normalizeDate(today);
+    }
+
     sortTodosByPriority(todos) {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         return todos.sort((a, b) => {
@@ -422,10 +467,33 @@ class TodoApp {
                 return a.completed ? 1 : -1;
             }
             
+            // Überfällige Todos nach oben (nur bei nicht erledigten)
+            if (!a.completed && !b.completed) {
+                const aOverdue = this.isOverdue(a.dueDate);
+                const bOverdue = this.isOverdue(b.dueDate);
+                if (aOverdue !== bOverdue) {
+                    return aOverdue ? -1 : 1;
+                }
+            }
+            
+            // Nach Fälligkeitsdatum sortieren (frühere zuerst)
+            const aHasDate = a.dueDate && !a.completed;
+            const bHasDate = b.dueDate && !b.completed;
+            
+            if (aHasDate && !bHasDate) return -1;
+            if (!aHasDate && bHasDate) return 1;
+            
+            if (aHasDate && bHasDate) {
+                const dateA = a.dueDate instanceof Date ? a.dueDate : new Date(a.dueDate);
+                const dateB = b.dueDate instanceof Date ? b.dueDate : new Date(b.dueDate);
+                const dateDiff = dateA - dateB;
+                if (dateDiff !== 0) return dateDiff;
+            }
+            
             const priorityA = priorityOrder[a.priority] || 2;
             const priorityB = priorityOrder[b.priority] || 2;
             
-            // Erst nach Priorität sortieren (hoch zu niedrig)
+            // Nach Priorität sortieren (hoch zu niedrig)
             if (priorityA !== priorityB) {
                 return priorityB - priorityA;
             }
@@ -462,20 +530,26 @@ class TodoApp {
 
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
+        const dateInput = document.getElementById(`todo-date-${projectId}`);
         const priorityRadios = document.querySelectorAll(`input[name="priority-${projectId}"]:checked`);
         
         const text = textInput.value.trim();
+        const dueDate = dateInput.value ? new Date(dateInput.value) : null;
         const priority = priorityRadios.length > 0 ? priorityRadios[0].value : 'medium';
         
         if (text) {
-            this.addTodo(projectId, text, priority);
+            this.addTodo(projectId, text, priority, dueDate);
             // Nach dem Re-Rendering die neuen Elemente finden und Fokus setzen
             setTimeout(() => {
                 const newTextInput = document.getElementById(`todo-text-${projectId}`);
+                const newDateInput = document.getElementById(`todo-date-${projectId}`);
                 const newPriorityRadio = document.querySelector(`input[name="priority-${projectId}"][value="medium"]`);
                 if (newTextInput) {
                     newTextInput.value = '';
                     newTextInput.focus();
+                }
+                if (newDateInput) {
+                    newDateInput.value = '';
                 }
                 if (newPriorityRadio) {
                     newPriorityRadio.checked = true;
@@ -495,26 +569,35 @@ class TodoApp {
             return;
         }
         
+        const dueDateValue = todo.dueDate ? (todo.dueDate instanceof Date ? todo.dueDate.toISOString().split('T')[0] : new Date(todo.dueDate).toISOString().split('T')[0]) : '';
+        
         todoElement.innerHTML = `
             <div class="edit-todo-form">
                 <input type="text" id="edit-text-${todoId}" value="${todo.text}" class="edit-input">
+                <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum">
                 <select id="edit-priority-${todoId}" class="edit-select">
                     <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Niedrig</option>
                     <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Mittel</option>
                     <option value="high" ${todo.priority === 'high' ? 'selected' : ''}>Hoch</option>
                 </select>
-                <button onclick="app.saveEditTodo('${projectId}', '${todoId}')" class="btn-small">Speichern</button>
-                <button onclick="app.cancelEditTodo('${projectId}', '${todoId}')" class="btn-small">Abbrechen</button>
+                <button onclick="app.saveEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Speichern">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
+                </button>
+                <button onclick="app.cancelEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Abbrechen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
         `;
     }
 
     saveEditTodo(projectId, todoId) {
         const newText = document.getElementById(`edit-text-${todoId}`).value.trim();
+        const newDateValue = document.getElementById(`edit-date-${todoId}`).value;
+        const newDueDate = newDateValue ? new Date(newDateValue) : null;
         const newPriority = document.getElementById(`edit-priority-${todoId}`).value;
         
         if (newText) {
-            this.editTodo(projectId, todoId, newText, newPriority);
+            this.editTodo(projectId, todoId, newText, newPriority, newDueDate);
         }
     }
 
@@ -795,16 +878,21 @@ class TodoApp {
     }
 
     generateCSV() {
-        const headers = ['Projekt', 'Todo', 'Priorität', 'Status', 'Erstellt am'];
+        const headers = ['Projekt', 'Todo', 'Priorität', 'Status', 'Fälligkeitsdatum', 'Erstellt am'];
         const rows = [headers];
 
         this.projects.forEach(project => {
             project.todos.forEach(todo => {
+                const dueDate = todo.dueDate ? 
+                    (todo.dueDate instanceof Date ? todo.dueDate : new Date(todo.dueDate)).toLocaleDateString('de-DE') : 
+                    '';
+                
                 rows.push([
                     `"${project.name}"`,
                     `"${todo.text}"`,
                     `"${this.getPriorityText(todo.priority)}"`,
                     `"${todo.completed ? 'Erledigt' : 'Offen'}"`,
+                    `"${dueDate}"`,
                     `"${new Date(todo.createdAt).toLocaleString('de-DE')}"`
                 ]);
             });
@@ -963,12 +1051,15 @@ class TodoApp {
                 
                 const priority = this.mapPriorityFromText(row['Priorität']) || 'medium';
                 const completed = row['Status'] === 'Erledigt';
+                const dueDateText = row['Fälligkeitsdatum'] || '';
+                const dueDate = dueDateText ? this.parseDueDateFromCSV(dueDateText) : null;
                 
                 projects[projectName].todos.push({
                     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                     text: todoText,
                     completed: completed,
                     priority: priority,
+                    dueDate: dueDate,
                     createdAt: new Date()
                 });
             }
@@ -985,6 +1076,26 @@ class TodoApp {
         if (lower.includes('hoch') || lower.includes('high')) return 'high';
         if (lower.includes('niedrig') || lower.includes('low')) return 'low';
         return 'medium';
+    }
+
+    parseDueDateFromCSV(dateText) {
+        if (!dateText || dateText.trim() === '') return null;
+        
+        try {
+            // Try parsing German date format (DD.MM.YYYY)
+            const germanDateRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
+            const match = dateText.match(germanDateRegex);
+            if (match) {
+                const [, day, month, year] = match;
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            }
+            
+            // Fallback to standard date parsing
+            const parsedDate = new Date(dateText);
+            return isNaN(parsedDate.getTime()) ? null : parsedDate;
+        } catch (error) {
+            return null;
+        }
     }
 
     mergeData(importedData) {

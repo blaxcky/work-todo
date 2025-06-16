@@ -304,7 +304,7 @@ body {
 
 .todo-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     padding: 12px;
     margin-bottom: 8px;
     background: #f8f9fa;
@@ -344,8 +344,8 @@ body {
 
 .todo-item.completed .btn-edit,
 .todo-item.completed .btn-delete {
-    background: #95a5a6 !important;
-    color: white !important;
+    color: #95a5a6 !important;
+    opacity: 0.6;
 }
 
 .todo-item.slide-down {
@@ -370,6 +370,7 @@ body {
 /* Custom Checkbox Styling */
 .todo-checkbox {
     margin-right: 16px;
+    margin-top: 2px;
     width: 20px;
     height: 20px;
     cursor: pointer;
@@ -443,9 +444,9 @@ body {
 }
 
 .todo-text {
-    flex: 1;
     font-size: 1rem;
-    margin-right: 16px;
+    line-height: 1.4;
+    margin: 0;
 }
 
 .todo-text.completed {
@@ -453,28 +454,76 @@ body {
     color: #7f8c8d;
 }
 
+.todo-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-right: 16px;
+    align-self: stretch;
+    align-items: flex-start;
+}
+
+.todo-due-date {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    background: #f8f9fa;
+    padding: 2px 6px 2px 0;
+    border-radius: 0;
+    font-weight: 500;
+    display: block;
+    width: fit-content;
+    text-align: left;
+}
+
+.todo-due-date.overdue {
+    background: #fee;
+    color: #e74c3c;
+    border: 1px solid #f8d7da;
+}
+
+.todo-item.overdue {
+    background: #fef8f8;
+}
+
 
 .todo-actions {
     display: flex;
     gap: 8px;
+    align-self: center;
+    align-items: center;
 }
 
 .btn-small {
-    padding: 4px 8px;
+    padding: 6px 8px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    background: transparent;
+    color: #7f8c8d;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background: #f8f9fa;
+    color: #2c3e50;
+    transform: scale(1.1);
 }
 
 .btn-edit {
-    background: #f39c12;
-    color: white;
+    background: transparent;
+    color: #7f8c8d;
 }
 
 .btn-delete {
-    background: #e74c3c;
-    color: white;
+    background: transparent;
+    color: #7f8c8d;
 }
 
 .input-group {
@@ -505,7 +554,7 @@ body {
 }
 
 .todo-input {
-    flex: 1;
+    flex: 2;
     padding: 12px;
     border: 2px solid #ddd;
     border-radius: 8px;
@@ -513,7 +562,17 @@ body {
     transition: border-color 0.3s ease;
 }
 
-.todo-input:focus {
+.todo-date-input {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    min-width: 150px;
+}
+
+.todo-input:focus,
+.todo-date-input:focus {
     outline: none;
     border-color: #3498db;
 }
@@ -616,7 +675,7 @@ body {
     width: 100%;
 }
 
-.edit-input, .edit-select {
+.edit-input, .edit-select, .edit-date-input {
     padding: 6px 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -625,6 +684,10 @@ body {
 
 .edit-input {
     flex: 1;
+}
+
+.edit-date-input {
+    width: 130px;
 }
 
 .edit-select {
@@ -770,16 +833,27 @@ body.dark-theme .todo-item.completed .todo-checkbox:checked {
     border-color: #7f8c8d !important;
 }
 
+body.dark-theme .btn-small {
+    color: #aaa;
+}
+
+body.dark-theme .btn-small:hover {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
 body.dark-theme .todo-item.completed .btn-edit,
 body.dark-theme .todo-item.completed .btn-delete {
-    background: #7f8c8d !important;
-    color: white !important;
+    color: #7f8c8d !important;
+    opacity: 0.6;
 }
 
 body.dark-theme .search-input,
 body.dark-theme #project-name-input,
 body.dark-theme .edit-input,
 body.dark-theme .edit-select,
+body.dark-theme .edit-date-input,
+body.dark-theme .todo-date-input,
 body.dark-theme .input-group input,
 body.dark-theme .input-group select {
     background: #3a3a3a;
@@ -789,6 +863,7 @@ body.dark-theme .input-group select {
 
 body.dark-theme .search-input::placeholder,
 body.dark-theme #project-name-input::placeholder,
+body.dark-theme .todo-date-input::placeholder,
 body.dark-theme .input-group input::placeholder {
     color: #aaa;
 }
@@ -1109,6 +1184,21 @@ body.dark-theme .archive-banner-text p {
 
 body.dark-theme .original-project {
     color: #aaa;
+}
+
+body.dark-theme .todo-due-date {
+    background: #3a3a3a;
+    color: #aaa;
+}
+
+body.dark-theme .todo-due-date.overdue {
+    background: #4a2c2c;
+    color: #e74c3c;
+    border-color: #5a3333;
+}
+
+body.dark-theme .todo-item.overdue {
+    background: #3a2a2a;
 }
 
 body.dark-theme .project-header {

@@ -21,10 +21,6 @@ Todos sollen in Projekte organisiert werden können.
 - [x] Suchfunktion mit Highlighting
 - [x] Dark/Light Mode Toggle
 
-## Nächste Aufgaben
-- [ ] Repository auf GitHub erstellen und Code pushen
-- [ ] GitHub Pages aktivieren
-
 ## Implementierte Features ✅
 
 - [x] Todo erstellen, bearbeiten, löschen
@@ -35,6 +31,7 @@ Todos sollen in Projekte organisiert werden können.
 - [x] Dark/Light Mode Toggle
 - [x] Todo bearbeiten (Edit-Funktion)
 - [x] Projekt löschen/umbenennen
+- [x] Due Dates für Todos mit visuellen Indikatoren
 - [x] Responsive Design
 - [x] LocalStorage Persistierung
 - [x] GitHub Pages Deployment
@@ -42,9 +39,7 @@ Todos sollen in Projekte organisiert werden können.
 ## Zukünftige Features 🚀
 
 - [ ] Drag & Drop für Todo-Reihenfolge
-- [ ] Due Dates für Todos
 - [ ] Tags/Labels für bessere Organisation
-- [ ] Datenexport (JSON, CSV)
 - [ ] Todo-Statistiken anzeigen
 - [ ] Keyboard Shortcuts
 - [ ] Todo-Kategorien/Farben
