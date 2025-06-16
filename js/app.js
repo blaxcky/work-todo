@@ -555,6 +555,9 @@ class TodoApp {
                         <h3>Archiv</h3>
                         <p>Alle archivierten Todos • ${archiveProject.todos.length} Einträge</p>
                     </div>
+                    <button class="btn-clear-archive" onclick="app.showClearArchiveModal()" title="Archiv leeren">
+                        🗑️ Archiv leeren
+                    </button>
                 </div>
                 <div class="todos-list">
                     ${sortedTodos.length > 0 ? this.renderTodoHierarchyForArchive(sortedTodos, 'archive') : '<div class="no-todos">Keine Todos im Archiv gefunden</div>'}
@@ -1153,6 +1156,12 @@ class TodoApp {
             }
         });
 
+        document.getElementById('clear-archive-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'clear-archive-modal') {
+                this.hideClearArchiveModal();
+            }
+        });
+
         document.getElementById('export-json').addEventListener('click', () => {
             this.exportData('json');
         });
@@ -1199,6 +1208,14 @@ class TodoApp {
 
         document.getElementById('archive-confirm').addEventListener('click', () => {
             this.confirmArchive();
+        });
+
+        document.getElementById('clear-archive-cancel').addEventListener('click', () => {
+            this.hideClearArchiveModal();
+        });
+
+        document.getElementById('clear-archive-confirm').addEventListener('click', () => {
+            this.confirmClearArchive();
         });
     }
 
@@ -1299,6 +1316,7 @@ class TodoApp {
         this.hideExportModal();
         this.hideImportModal();
         this.hideArchiveModal();
+        this.hideClearArchiveModal();
     }
 
     showArchiveModal() {
@@ -1667,6 +1685,40 @@ class TodoApp {
         }
         
         return archiveProject;
+    }
+
+    showClearArchiveModal() {
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject || archiveProject.todos.length === 0) {
+            this.showToast('Das Archiv ist bereits leer.', 'info');
+            return;
+        }
+        
+        document.getElementById('clear-archive-count-text').textContent = 
+            `${archiveProject.todos.length} Todo${archiveProject.todos.length === 1 ? '' : 's'} im Archiv ${archiveProject.todos.length === 1 ? 'wird' : 'werden'} permanent gelöscht.`;
+        document.getElementById('clear-archive-modal').style.display = 'flex';
+    }
+
+    hideClearArchiveModal() {
+        document.getElementById('clear-archive-modal').style.display = 'none';
+    }
+
+    confirmClearArchive() {
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject) {
+            this.showToast('Archiv-Projekt nicht gefunden.', 'error');
+            return;
+        }
+
+        const todoCount = archiveProject.todos.length;
+        archiveProject.todos = [];
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+        this.hideClearArchiveModal();
+        
+        this.showToast(`${todoCount} Todo${todoCount === 1 ? '' : 's'} aus dem Archiv gelöscht.`);
     }
 }
 

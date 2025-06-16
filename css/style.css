@@ -1637,6 +1637,15 @@ body.dark-theme .archive-banner-text p {
     color: #aaa;
 }
 
+body.dark-theme .btn-clear-archive {
+    background: #e74c3c;
+}
+
+body.dark-theme .btn-clear-archive:hover {
+    background: #c0392b;
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
 body.dark-theme .original-project {
     color: #aaa;
 }
@@ -2029,6 +2038,7 @@ body.dark-theme .project-header {
     border-radius: 8px;
     margin-bottom: 20px;
     border-left: 4px solid #9b59b6;
+    position: relative;
 }
 
 .archive-banner-icon {
@@ -2045,6 +2055,29 @@ body.dark-theme .project-header {
     margin: 0;
     color: #6c757d;
     font-size: 0.9rem;
+}
+
+.btn-clear-archive {
+    position: absolute;
+    right: 20px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.btn-clear-archive:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 .todo-content {

@@ -35,6 +35,7 @@ Todos sollen in Projekte organisiert werden können.
 - [x] Responsive Design
 - [x] LocalStorage Persistierung
 - [x] GitHub Pages Deployment
+- [x] Archiv-Funktion mit Leeren-Option
 
 ## Zukünftige Features 🚀
 
