@@ -627,8 +627,12 @@ body.dark-theme #todo-container {
     border-radius: 50%;
     background: rgba(149, 165, 166, 0.1);
     position: relative;
-    transition: all 0.3s ease;
+    transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
     flex-shrink: 0;
+}
+
+.todo-checkbox::after {
+    transition: none;
 }
 
 .todo-checkbox.priority-high {
@@ -660,6 +664,7 @@ body.dark-theme #todo-container {
     font-size: 12px;
     font-weight: bold;
     opacity: 0.4;
+    transition: none;
 }
 
 .todo-checkbox.priority-high:hover {
