@@ -631,6 +631,16 @@ body.dark-theme #todo-container {
     flex-shrink: 0;
 }
 
+.todo-checkbox::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    cursor: pointer;
+}
+
 .todo-checkbox::after {
     transition: none;
 }
