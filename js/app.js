@@ -471,8 +471,8 @@ class TodoApp {
             const marginLeft = level * 20;
             
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+                     data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
@@ -577,8 +577,8 @@ class TodoApp {
             const marginLeft = level * 20;
             
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+                     data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
@@ -793,8 +793,8 @@ class TodoApp {
             const marginLeft = level * 20;
             
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+                     data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">

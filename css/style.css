@@ -560,30 +560,22 @@ body.dark-theme #todo-container {
 .todo-item {
     display: flex;
     align-items: flex-start;
-    padding: 12px;
-    margin-bottom: 8px;
-    background: #f8f9fa;
+    padding: 12px 12px 12px 12px;
+    margin-bottom: 0;
+    background: transparent;
     border-radius: 0;
-    border-left: 4px solid #95a5a6;
+    border-bottom: 1px solid #e9ecef;
     transition: all 0.5s ease;
     transform: translateY(0);
 }
 
-.todo-item.priority-high {
-    border-left-color: #e74c3c;
+.todo-item.has-visible-subtasks {
+    border-bottom: none;
 }
 
-.todo-item.priority-medium {
-    border-left-color: #f39c12;
-}
-
-.todo-item.priority-low {
-    border-left-color: #3498db;
-}
 
 .todo-item.completed {
-    background: #f1f1f1;
-    border-left-color: #95a5a6;
+    background: transparent;
     opacity: 0.7;
     transform: translateY(2px);
 }
@@ -631,9 +623,9 @@ body.dark-theme #todo-container {
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
-    border: 3px solid #95a5a6;
-    border-radius: 0;
-    background: white;
+    border: 2px solid #95a5a6;
+    border-radius: 50%;
+    background: rgba(149, 165, 166, 0.1);
     position: relative;
     transition: all 0.3s ease;
     flex-shrink: 0;
@@ -641,30 +633,51 @@ body.dark-theme #todo-container {
 
 .todo-checkbox.priority-high {
     border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
 }
 
 .todo-checkbox.priority-medium {
     border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
 }
 
 .todo-checkbox.priority-low {
     border-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
 }
 
 .todo-checkbox:hover {
     transform: scale(1.05);
 }
 
+.todo-checkbox:hover::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: currentColor;
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0.4;
+}
+
 .todo-checkbox.priority-high:hover {
     border-color: #c0392b;
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
 }
 
 .todo-checkbox.priority-medium:hover {
     border-color: #e67e22;
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
 }
 
 .todo-checkbox.priority-low:hover {
     border-color: #2980b9;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
 }
 
 .todo-checkbox:checked {
@@ -738,7 +751,7 @@ body.dark-theme #todo-container {
 }
 
 .todo-item.overdue {
-    background: #fef8f8;
+    background: transparent;
 }
 
 
@@ -1068,25 +1081,17 @@ body.dark-theme .project-title {
 }
 
 body.dark-theme .todo-item {
-    background: #3a3a3a;
-    border-left-color: #95a5a6;
+    background: transparent;
+    border-bottom-color: #444;
 }
 
-body.dark-theme .todo-item.priority-high {
-    border-left-color: #e74c3c;
+body.dark-theme .todo-item.has-visible-subtasks {
+    border-bottom: none;
 }
 
-body.dark-theme .todo-item.priority-medium {
-    border-left-color: #f39c12;
-}
-
-body.dark-theme .todo-item.priority-low {
-    border-left-color: #3498db;
-}
 
 body.dark-theme .todo-item.completed {
-    background: #2a2a2a;
-    border-left-color: #7f8c8d;
+    background: transparent;
     opacity: 0.6;
 }
 
@@ -1290,32 +1295,41 @@ body.dark-theme mark {
 
 /* Dark Theme Checkbox */
 body.dark-theme .todo-checkbox {
-    background: #3a3a3a;
+    background: rgba(149, 165, 166, 0.1);
     border-color: #95a5a6;
 }
 
 body.dark-theme .todo-checkbox.priority-high {
     border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
 }
 
 body.dark-theme .todo-checkbox.priority-medium {
     border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
 }
 
 body.dark-theme .todo-checkbox.priority-low {
     border-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
 }
 
 body.dark-theme .todo-checkbox.priority-high:hover {
     border-color: #c0392b;
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
 }
 
 body.dark-theme .todo-checkbox.priority-medium:hover {
     border-color: #e67e22;
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
 }
 
 body.dark-theme .todo-checkbox.priority-low:hover {
     border-color: #2980b9;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
 }
 
 body.dark-theme .todo-checkbox.priority-high:checked {
@@ -1662,7 +1676,7 @@ body.dark-theme .todo-due-date.overdue {
 }
 
 body.dark-theme .todo-item.overdue {
-    background: #3a2a2a;
+    background: transparent;
 }
 
 body.dark-theme .project-header {
