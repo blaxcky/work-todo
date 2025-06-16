@@ -366,8 +366,8 @@ class TodoApp {
             <div class="project-section">
                 <div class="add-todo-form">
                     <div class="input-row">
-                        <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input">
-                        <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)">
+                        <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input" autocomplete="off" autocorrect="off" spellcheck="false">
+                        <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)" autocomplete="off">
                         <div class="priority-radio-group">
                             <label class="priority-radio">
                                 <input type="radio" name="priority-${currentProject.id}" value="high" class="radio-input">
@@ -908,8 +908,8 @@ class TodoApp {
         if (mainContent) {
             mainContent.innerHTML = `
                 <div class="edit-todo-form">
-                    <input type="text" id="edit-text-${todoId}" value="${todo.text.replace(/"/g, '&quot;')}" class="edit-input">
-                    <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum">
+                    <input type="text" id="edit-text-${todoId}" value="${todo.text.replace(/"/g, '&quot;')}" class="edit-input" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum" autocomplete="off">
                     <select id="edit-priority-${todoId}" class="edit-select">
                         <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Niedrig</option>
                         <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Mittel</option>
@@ -955,7 +955,7 @@ class TodoApp {
         const formHtml = `
             <div class="add-subtask-form" style="margin-left: 40px; margin-top: 8px;">
                 <div class="subtask-input-row">
-                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen..." class="subtask-input">
+                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen..." class="subtask-input" autocomplete="off" autocorrect="off" spellcheck="false">
                     <select id="subtask-priority-${parentId}" class="subtask-priority-select">
                         <option value="low">Niedrig</option>
                         <option value="medium" selected>Mittel</option>

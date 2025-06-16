@@ -30,7 +30,7 @@
                 </button>
                 <div id="add-project-form" class="add-project-form-container" style="display: none;">
                     <div class="add-project-form">
-                        <input type="text" id="project-name-input" placeholder="Projektname eingeben...">
+                        <input type="text" id="project-name-input" placeholder="Projektname eingeben..." autocomplete="off" autocorrect="off" spellcheck="false">
                         <div class="form-actions">
                             <button onclick="app.submitProject()" class="btn-confirm" title="Erstellen">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
@@ -57,7 +57,7 @@
                 </div>
                 <div class="header-controls">
                     <div class="search-container">
-                        <input type="text" id="search-input" placeholder="Todos durchsuchen..." class="search-input">
+                        <input type="text" id="search-input" placeholder="Todos durchsuchen..." class="search-input" autocomplete="off" autocorrect="off" spellcheck="false">
                         <button id="clear-search" class="btn-small" style="display: none;">✕</button>
                     </div>
                     <div class="header-right">
