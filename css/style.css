@@ -730,6 +730,11 @@ body {
     align-items: center;
     gap: 10px;
     width: 100%;
+    flex-wrap: wrap;
+    padding: 8px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    margin: 4px 0;
 }
 
 .edit-input, .edit-select, .edit-date-input {
@@ -937,6 +942,119 @@ body.dark-theme .btn-cancel {
 
 body.dark-theme .btn-cancel:hover {
     background: #6c7b7d;
+}
+
+/* Subtask Styles */
+.todo-main-content {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: 8px;
+}
+
+.subtask-toggle {
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: #7f8c8d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    margin-top: 0;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.subtask-toggle:hover {
+    color: #2c3e50;
+    background: #f8f9fa;
+    transform: scale(1.1);
+}
+
+.subtask-spacer {
+    width: 28px;
+    height: 28px;
+    margin-top: 0;
+}
+
+.btn-add-subtask {
+    background: transparent;
+    color: #27ae60;
+    border: 1px solid #27ae60;
+}
+
+.btn-add-subtask:hover {
+    background: #27ae60;
+    color: white;
+    transform: scale(1.1);
+}
+
+.add-subtask-form {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    padding: 12px;
+    border-left: 3px solid #3498db;
+}
+
+.subtask-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.subtask-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    font-size: 0.9rem;
+}
+
+.subtask-priority-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    font-size: 0.9rem;
+    min-width: 80px;
+}
+
+/* Dark theme subtask styles */
+body.dark-theme .subtask-toggle {
+    color: #aaa;
+}
+
+body.dark-theme .subtask-toggle:hover {
+    color: #e0e0e0;
+    background: #3a3a3a;
+}
+
+body.dark-theme .btn-add-subtask {
+    color: #27ae60;
+    border-color: #27ae60;
+}
+
+body.dark-theme .btn-add-subtask:hover {
+    background: #27ae60;
+    color: white;
+}
+
+body.dark-theme .add-subtask-form {
+    background: #3a3a3a;
+    border-color: #555;
+    border-left-color: #74b9ff;
+}
+
+body.dark-theme .subtask-input,
+body.dark-theme .subtask-priority-select {
+    background: #2d2d2d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-theme .edit-todo-form {
+    background: #3a3a3a;
+    border-color: #555;
 }
 
 body.dark-theme .search-input::placeholder,

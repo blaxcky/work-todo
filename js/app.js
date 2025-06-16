@@ -23,7 +23,34 @@ class TodoApp {
 
     loadFromStorage() {
         const data = localStorage.getItem('todoApp');
-        return data ? JSON.parse(data) : null;
+        if (!data) return null;
+        
+        const projects = JSON.parse(data);
+        
+        // Migration: Ensure all todos have subtask fields
+        projects.forEach(project => {
+            project.todos.forEach(todo => {
+                if (!todo.subtasks) todo.subtasks = [];
+                if (todo.collapsed === undefined) todo.collapsed = false;
+                if (!todo.parentId) todo.parentId = null;
+                
+                // Recursively migrate subtasks
+                this.migrateTodoData(todo);
+            });
+        });
+        
+        return projects;
+    }
+
+    migrateTodoData(todo) {
+        if (todo.subtasks) {
+            todo.subtasks.forEach(subtask => {
+                if (!subtask.subtasks) subtask.subtasks = [];
+                if (subtask.collapsed === undefined) subtask.collapsed = false;
+                if (!subtask.parentId) subtask.parentId = todo.id;
+                this.migrateTodoData(subtask);
+            });
+        }
     }
 
     saveToStorage() {
@@ -42,7 +69,34 @@ class TodoApp {
         this.switchToProject(project.id);
     }
 
-    addTodo(projectId, text, priority = 'medium', dueDate = null) {
+    findTodoById(project, todoId) {
+        // Search in main todos
+        for (let todo of project.todos) {
+            if (todo.id === todoId) {
+                return todo;
+            }
+            // Search in subtasks recursively
+            const found = this.findTodoInSubtasks(todo, todoId);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    findTodoInSubtasks(todo, todoId) {
+        if (!todo.subtasks) return null;
+        
+        for (let subtask of todo.subtasks) {
+            if (subtask.id === todoId) {
+                return subtask;
+            }
+            // Recursive search in nested subtasks
+            const found = this.findTodoInSubtasks(subtask, todoId);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    addTodo(projectId, text, priority = 'medium', dueDate = null, parentId = null) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = {
@@ -51,9 +105,22 @@ class TodoApp {
                 completed: false,
                 priority: priority,
                 dueDate: dueDate,
-                createdAt: new Date()
+                createdAt: new Date(),
+                parentId: parentId,
+                subtasks: [],
+                collapsed: false
             };
-            project.todos.push(todo);
+            
+            if (parentId) {
+                // Find parent todo and add this as subtask
+                const parentTodo = this.findTodoById(project, parentId);
+                if (parentTodo) {
+                    parentTodo.subtasks.push(todo);
+                }
+            } else {
+                project.todos.push(todo);
+            }
+            
             this.saveToStorage();
             this.render();
             return true;
@@ -64,11 +131,16 @@ class TodoApp {
     toggleTodo(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
-            const todo = project.todos.find(t => t.id === todoId);
+            const todo = this.findTodoById(project, todoId);
             if (todo) {
                 // Animation nur bei Completion (nicht beim Un-Check)
                 const wasCompleted = todo.completed;
                 todo.completed = !todo.completed;
+                
+                // If todo has subtasks, toggle them too
+                if (todo.subtasks && todo.subtasks.length > 0) {
+                    this.toggleSubtasks(todo.subtasks, todo.completed);
+                }
                 
                 if (!wasCompleted) {
                     // Todo wurde gerade erledigt - Animation für das Verschieben nach unten
@@ -92,19 +164,68 @@ class TodoApp {
         }
     }
 
+    toggleSubtasks(subtasks, completed) {
+        subtasks.forEach(subtask => {
+            subtask.completed = completed;
+            if (subtask.subtasks && subtask.subtasks.length > 0) {
+                this.toggleSubtasks(subtask.subtasks, completed);
+            }
+        });
+    }
+
     deleteTodo(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
-            project.todos = project.todos.filter(t => t.id !== todoId);
+            // Try to delete from main todos
+            const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
+            if (mainTodoIndex !== -1) {
+                project.todos.splice(mainTodoIndex, 1);
+            } else {
+                // Search and delete from subtasks
+                this.deleteFromSubtasks(project.todos, todoId);
+            }
             this.saveToStorage();
             this.render();
         }
     }
 
+    deleteFromSubtasks(todos, todoId) {
+        for (let todo of todos) {
+            if (todo.subtasks) {
+                const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
+                if (subtaskIndex !== -1) {
+                    todo.subtasks.splice(subtaskIndex, 1);
+                    return true;
+                }
+                // Recursive search
+                if (this.deleteFromSubtasks(todo.subtasks, todoId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    toggleSubtaskCollapse(projectId, todoId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project) {
+            const todo = this.findTodoById(project, todoId);
+            if (todo && todo.subtasks && todo.subtasks.length > 0) {
+                todo.collapsed = !todo.collapsed;
+                this.saveToStorage();
+                this.render();
+            }
+        }
+    }
+
+    addSubtask(projectId, parentId, text, priority = 'medium', dueDate = null) {
+        return this.addTodo(projectId, text, priority, dueDate, parentId);
+    }
+
     editTodo(projectId, todoId, newText, newPriority, newDueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
-            const todo = project.todos.find(t => t.id === todoId);
+            const todo = this.findTodoById(project, todoId);
             if (todo) {
                 todo.text = newText;
                 todo.priority = newPriority;
@@ -218,8 +339,7 @@ class TodoApp {
         }
 
         const filteredTodos = this.searchTerm 
-            ? currentProject.todos.filter(todo => 
-                todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()))
+            ? this.filterTodosRecursive(currentProject.todos, this.searchTerm)
             : currentProject.todos;
 
         const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
@@ -251,25 +371,7 @@ class TodoApp {
                     </div>
                 </div>
                 <div class="todos-list">
-                    ${sortedTodos.length > 0 ? sortedTodos.map(todo => `
-                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
-                            <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
-                                   ${todo.completed ? 'checked' : ''} 
-                                   onchange="app.toggleTodo('${currentProject.id}', '${todo.id}')">
-                            <div class="todo-content">
-                                <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
-                                ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                            </div>
-                            <div class="todo-actions">
-                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${currentProject.id}', '${todo.id}')" title="Bearbeiten">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                </button>
-                                <button class="btn-small btn-delete" onclick="app.deleteTodo('${currentProject.id}', '${todo.id}')" title="Löschen">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('') : '<div class="no-todos">Noch keine Todos in diesem Projekt</div>'}
+                    ${sortedTodos.length > 0 ? this.renderTodoHierarchy(sortedTodos, currentProject.id) : '<div class="no-todos">Noch keine Todos in diesem Projekt</div>'}
                 </div>
             </div>
         `;
@@ -465,7 +567,7 @@ class TodoApp {
 
     sortTodosByPriority(todos) {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return todos.sort((a, b) => {
+        const sorted = todos.sort((a, b) => {
             // Erledigte Todos immer nach unten
             if (a.completed !== b.completed) {
                 return a.completed ? 1 : -1;
@@ -505,6 +607,15 @@ class TodoApp {
             // Bei gleicher Priorität nach Erstellungsdatum sortieren (neueste zuerst)
             return new Date(b.createdAt) - new Date(a.createdAt);
         });
+
+        // Sort subtasks recursively
+        sorted.forEach(todo => {
+            if (todo.subtasks && todo.subtasks.length > 0) {
+                todo.subtasks = this.sortTodosByPriority(todo.subtasks);
+            }
+        });
+
+        return sorted;
     }
 
     highlightSearchTerm(text) {
@@ -512,6 +623,90 @@ class TodoApp {
         
         const regex = new RegExp(`(${this.searchTerm})`, 'gi');
         return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    filterTodosRecursive(todos, searchTerm) {
+        const filtered = [];
+        const term = searchTerm.toLowerCase();
+        
+        todos.forEach(todo => {
+            const matchesText = todo.text.toLowerCase().includes(term);
+            const hasMatchingSubtasks = todo.subtasks && this.hasMatchingSubtasks(todo.subtasks, term);
+            
+            if (matchesText || hasMatchingSubtasks) {
+                const todoClone = { ...todo };
+                
+                if (todo.subtasks) {
+                    todoClone.subtasks = this.filterTodosRecursive(todo.subtasks, searchTerm);
+                }
+                
+                filtered.push(todoClone);
+            }
+        });
+        
+        return filtered;
+    }
+
+    hasMatchingSubtasks(subtasks, term) {
+        return subtasks.some(subtask => {
+            const matchesText = subtask.text.toLowerCase().includes(term);
+            const hasMatchingChildren = subtask.subtasks && this.hasMatchingSubtasks(subtask.subtasks, term);
+            return matchesText || hasMatchingChildren;
+        });
+    }
+
+    renderTodoHierarchy(todos, projectId, level = 0) {
+        return todos.map(todo => {
+            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
+            const isCollapsed = todo.collapsed || false;
+            const marginLeft = level * 20;
+            
+            let html = `
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                    <div class="todo-main-content">
+                        ${hasSubtasks ? `
+                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
+                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                </svg>
+                            </button>
+                        ` : '<div class="subtask-spacer"></div>'}
+                        
+                        <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
+                               ${todo.completed ? 'checked' : ''} 
+                               onchange="app.toggleTodo('${projectId}', '${todo.id}')">
+                        <div class="todo-content">
+                            <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                            ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                        </div>
+                        <div class="todo-actions">
+                            ${level < 3 ? `
+                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                            <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add subtasks if not collapsed
+            if (hasSubtasks && !isCollapsed) {
+                html += this.renderTodoHierarchy(todo.subtasks, projectId, level + 1);
+            }
+            
+            return html;
+        }).join('');
     }
 
     search(term) {
@@ -564,7 +759,12 @@ class TodoApp {
 
     showEditTodoForm(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
-        const todo = project.todos.find(t => t.id === todoId);
+        const todo = this.findTodoById(project, todoId);
+        
+        if (!todo) {
+            console.error('Todo nicht gefunden:', todoId);
+            return;
+        }
         
         const todoElement = document.querySelector(`[data-todo-id="${todoId}"]`);
         if (!todoElement) {
@@ -575,23 +775,30 @@ class TodoApp {
         
         const dueDateValue = todo.dueDate ? (todo.dueDate instanceof Date ? todo.dueDate.toISOString().split('T')[0] : new Date(todo.dueDate).toISOString().split('T')[0]) : '';
         
-        todoElement.innerHTML = `
-            <div class="edit-todo-form">
-                <input type="text" id="edit-text-${todoId}" value="${todo.text}" class="edit-input">
-                <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum">
-                <select id="edit-priority-${todoId}" class="edit-select">
-                    <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Niedrig</option>
-                    <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Mittel</option>
-                    <option value="high" ${todo.priority === 'high' ? 'selected' : ''}>Hoch</option>
-                </select>
-                <button onclick="app.saveEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Speichern">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
-                </button>
-                <button onclick="app.cancelEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Abbrechen">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-        `;
+        // Find the todo-main-content div to replace it
+        const mainContent = todoElement.querySelector('.todo-main-content');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="edit-todo-form">
+                    <input type="text" id="edit-text-${todoId}" value="${todo.text.replace(/"/g, '&quot;')}" class="edit-input">
+                    <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum">
+                    <select id="edit-priority-${todoId}" class="edit-select">
+                        <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Niedrig</option>
+                        <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Mittel</option>
+                        <option value="high" ${todo.priority === 'high' ? 'selected' : ''}>Hoch</option>
+                    </select>
+                    <button onclick="app.saveEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Speichern">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
+                    </button>
+                    <button onclick="app.cancelEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Abbrechen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            `;
+            
+            // Focus on the text input
+            document.getElementById(`edit-text-${todoId}`).focus();
+        }
     }
 
     saveEditTodo(projectId, todoId) {
@@ -607,6 +814,57 @@ class TodoApp {
 
     cancelEditTodo(projectId, todoId) {
         this.render();
+    }
+
+    showAddSubtaskForm(projectId, parentId) {
+        // Create inline form for adding subtask
+        const parentElement = document.querySelector(`[data-todo-id="${parentId}"]`);
+        if (!parentElement) return;
+
+        // Check if form already exists
+        if (parentElement.querySelector('.add-subtask-form')) return;
+
+        const formHtml = `
+            <div class="add-subtask-form" style="margin-left: 40px; margin-top: 8px;">
+                <div class="subtask-input-row">
+                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen..." class="subtask-input">
+                    <select id="subtask-priority-${parentId}" class="subtask-priority-select">
+                        <option value="low">Niedrig</option>
+                        <option value="medium" selected>Mittel</option>
+                        <option value="high">Hoch</option>
+                    </select>
+                    <button onclick="app.submitSubtask('${projectId}', '${parentId}')" class="btn-small btn-confirm" title="Hinzufügen">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
+                    </button>
+                    <button onclick="app.cancelAddSubtask('${parentId}')" class="btn-small btn-cancel" title="Abbrechen">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        parentElement.insertAdjacentHTML('afterend', formHtml);
+        document.getElementById(`subtask-text-${parentId}`).focus();
+    }
+
+    submitSubtask(projectId, parentId) {
+        const textInput = document.getElementById(`subtask-text-${parentId}`);
+        const prioritySelect = document.getElementById(`subtask-priority-${parentId}`);
+        
+        const text = textInput.value.trim();
+        const priority = prioritySelect.value;
+        
+        if (text) {
+            this.addSubtask(projectId, parentId, text, priority);
+            this.cancelAddSubtask(parentId);
+        }
+    }
+
+    cancelAddSubtask(parentId) {
+        const form = document.querySelector('.add-subtask-form');
+        if (form) {
+            form.remove();
+        }
     }
 
     showAddProjectForm() {
@@ -678,6 +936,19 @@ class TodoApp {
             if (e.target.classList.contains('todo-input') && e.key === 'Enter') {
                 const projectId = e.target.id.replace('todo-text-', '');
                 this.submitTodo(projectId);
+            }
+            
+            // Event listener für Subtask-Eingabefelder
+            if (e.target.classList.contains('subtask-input') && e.key === 'Enter') {
+                const parentId = e.target.id.replace('subtask-text-', '');
+                const projectId = this.currentProjectId; // Use current project
+                this.submitSubtask(projectId, parentId);
+            }
+            
+            // ESC zum Abbrechen von Subtask-Formularen
+            if (e.key === 'Escape' && e.target.classList.contains('subtask-input')) {
+                const parentId = e.target.id.replace('subtask-text-', '');
+                this.cancelAddSubtask(parentId);
             }
         });
 
