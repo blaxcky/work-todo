@@ -9,12 +9,14 @@ class TodoApp {
         ];
         this.searchTerm = '';
         this.isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+        this.isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
         this.currentProjectId = this.projects[0].id;
         this.init();
     }
 
     init() {
         this.applyTheme();
+        this.applySidebarState();
         this.renderSidebar();
         this.render();
         this.bindEvents();
@@ -1074,15 +1076,35 @@ class TodoApp {
             this.toggleTheme();
         });
 
+        document.getElementById('sidebar-toggle').addEventListener('click', () => {
+            this.toggleSidebar();
+        });
+
+        document.getElementById('menu-toggle').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleDropdownMenu();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('dropdown-content');
+            const menuToggle = document.getElementById('menu-toggle');
+            if (!menuToggle.contains(e.target) && !dropdown.contains(e.target)) {
+                this.closeDropdownMenu();
+            }
+        });
+
         document.getElementById('archive-btn').addEventListener('click', () => {
             this.showArchiveModal();
         });
 
         document.getElementById('export-btn').addEventListener('click', () => {
+            this.closeDropdownMenu();
             this.showExportModal();
         });
 
         document.getElementById('import-btn').addEventListener('click', () => {
+            this.closeDropdownMenu();
             this.showImportModal();
         });
 
@@ -1165,6 +1187,33 @@ class TodoApp {
         this.applyTheme();
     }
 
+    toggleSidebar() {
+        this.isSidebarCollapsed = !this.isSidebarCollapsed;
+        localStorage.setItem('sidebarCollapsed', this.isSidebarCollapsed);
+        this.applySidebarState();
+    }
+
+    applySidebarState() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            if (this.isSidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+    }
+
+    toggleDropdownMenu() {
+        const dropdown = document.getElementById('dropdown-content');
+        dropdown.classList.toggle('show');
+    }
+
+    closeDropdownMenu() {
+        const dropdown = document.getElementById('dropdown-content');
+        dropdown.classList.remove('show');
+    }
+
     applyTheme() {
         const body = document.body;
         const themeToggle = document.getElementById('theme-toggle');
@@ -1183,6 +1232,7 @@ class TodoApp {
             if (e.key === 'Escape') {
                 this.hideAddProjectForm();
                 this.hideAllModals();
+                this.closeDropdownMenu();
             }
         });
     }

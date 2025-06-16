@@ -25,6 +25,14 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, width 0.3s ease;
+    position: relative;
+    z-index: 100;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-280px);
+    width: 0;
 }
 
 .sidebar-header {
@@ -126,6 +134,33 @@ body {
     align-items: center;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+.sidebar-toggle:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+    color: #3498db;
+    transform: scale(1.05);
+}
+
 .main-header h1 {
     color: #2c3e50;
     font-size: 2rem;
@@ -194,9 +229,10 @@ body.dark-theme #todo-container {
     max-width: 300px;
 }
 
-.import-export-buttons {
+.header-right {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
 }
 
 .archive-btn {
@@ -204,7 +240,7 @@ body.dark-theme #todo-container {
     color: white;
     border: none;
     padding: 10px 16px;
-    border-radius: 0;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
@@ -215,36 +251,83 @@ body.dark-theme #todo-container {
     background: #8e44ad;
 }
 
-.import-btn {
-    background: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 0;
+.dropdown-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.menu-toggle {
+    background: none;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
 }
 
-.import-btn:hover {
-    background: #2980b9;
+.menu-toggle:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+    color: #3498db;
+    transform: scale(1.05);
 }
 
-.export-btn {
-    background: #27ae60;
-    color: white;
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 48px;
+    background: white;
+    min-width: 180px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 8px 0;
+    z-index: 1000;
+    border: 1px solid #e0e0e0;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.dropdown-item {
+    width: 100%;
+    padding: 12px 16px;
     border: none;
-    padding: 10px 16px;
-    border-radius: 0;
+    background: none;
     cursor: pointer;
+    text-align: left;
     font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
+    color: #2c3e50;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.export-btn:hover {
-    background: #219a52;
+.dropdown-item:hover {
+    background: #f8f9fa;
+}
+
+.dropdown-item svg {
+    flex-shrink: 0;
 }
 
 .search-input {
@@ -792,6 +875,12 @@ mark {
         border-bottom: 1px solid #e0e0e0;
     }
     
+    .sidebar.collapsed {
+        transform: translateY(-100%);
+        height: 0;
+        width: 100%;
+    }
+    
     .sidebar-header {
         padding: 15px;
     }
@@ -1200,12 +1289,47 @@ body.dark-theme .main-header h1 {
     color: #e0e0e0;
 }
 
-body.dark-theme .export-btn {
-    background: #27ae60;
+body.dark-theme .sidebar-toggle {
+    border-color: #555;
+    color: #aaa;
 }
 
-body.dark-theme .export-btn:hover {
-    background: #219a52;
+body.dark-theme .sidebar-toggle:hover {
+    border-color: #3498db;
+    background: #3a3a3a;
+    color: #3498db;
+}
+
+body.dark-theme .menu-toggle {
+    border-color: #555;
+    color: #aaa;
+}
+
+body.dark-theme .menu-toggle:hover {
+    border-color: #3498db;
+    background: #3a3a3a;
+    color: #3498db;
+}
+
+body.dark-theme .dropdown-content {
+    background: #2d2d2d;
+    border-color: #555;
+}
+
+body.dark-theme .dropdown-item {
+    color: #e0e0e0;
+}
+
+body.dark-theme .dropdown-item:hover {
+    background: #3a3a3a;
+}
+
+body.dark-theme .archive-btn {
+    background: #9b59b6;
+}
+
+body.dark-theme .archive-btn:hover {
+    background: #8e44ad;
 }
 
 /* Dark Theme Modal */
@@ -1253,13 +1377,6 @@ body.dark-theme .export-desc {
 }
 
 /* Dark Theme Import Modal */
-body.dark-theme .import-btn {
-    background: #3498db;
-}
-
-body.dark-theme .import-btn:hover {
-    background: #2980b9;
-}
 
 body.dark-theme .file-drop-zone {
     border-color: #555;
