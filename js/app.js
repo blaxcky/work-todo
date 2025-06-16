@@ -384,21 +384,14 @@ class TodoApp {
     renderAllProjects(container) {
         let allTodos = [];
         
-        // Alle Todos aus allen Projekten sammeln
+        // Alle Todos aus allen Projekten sammeln (inkl. Subtasks)
         this.projects.forEach(project => {
-            project.todos.forEach(todo => {
-                allTodos.push({
-                    ...todo,
-                    projectId: project.id,
-                    projectName: project.name
-                });
-            });
+            this.collectAllTodosFromProject(project, allTodos);
         });
 
         // Nach Suchbegriff filtern
         const filteredTodos = this.searchTerm 
-            ? allTodos.filter(todo => 
-                todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()))
+            ? this.filterTodosRecursive(allTodos, this.searchTerm)
             : allTodos;
 
         // Nach Projekten gruppieren
@@ -430,25 +423,7 @@ class TodoApp {
                             <h3 class="project-title">${projectName}</h3>
                         </div>
                         <div class="todos-list">
-                            ${projectTodos.map(todo => `
-                                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
-                                    <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
-                                           ${todo.completed ? 'checked' : ''} 
-                                           onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
-                                    <div class="todo-content">
-                                        <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
-                                        ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                                    </div>
-                                    <div class="todo-actions">
-                                        <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                        <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')" title="Löschen">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                            ${this.renderTodoHierarchyForAllProjects(projectTodos, projectId)}
                         </div>
                     </div>
                 `;
@@ -456,6 +431,80 @@ class TodoApp {
         }
 
         container.innerHTML = html;
+    }
+
+    collectAllTodosFromProject(project, allTodos) {
+        project.todos.forEach(todo => {
+            const todoWithProject = {
+                ...todo,
+                projectId: project.id,
+                projectName: project.name,
+                // Keep original collapsed state, but default to true if undefined
+                collapsed: todo.collapsed !== undefined ? todo.collapsed : true
+            };
+            allTodos.push(todoWithProject);
+        });
+    }
+
+    renderTodoHierarchyForAllProjects(todos, projectId, level = 0) {
+        return todos.map(todo => {
+            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
+            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
+            const marginLeft = level * 20;
+            
+            let html = `
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                    <div class="todo-main-content">
+                        ${hasSubtasks ? `
+                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
+                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                </svg>
+                                <span class="subtask-count">(${todo.subtasks.length})</span>
+                            </button>
+                        ` : '<div class="subtask-spacer"></div>'}
+                        
+                        <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
+                               ${todo.completed ? 'checked' : ''} 
+                               onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
+                        <div class="todo-content">
+                            <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                            ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                        </div>
+                        <div class="todo-actions">
+                            ${level < 3 ? `
+                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${todo.projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                            <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')" title="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add subtasks if not collapsed
+            if (hasSubtasks && !isCollapsed) {
+                // Add subtasks with project info
+                const subtasksWithProject = todo.subtasks.map(subtask => ({
+                    ...subtask,
+                    projectId: todo.projectId,
+                    projectName: todo.projectName
+                }));
+                html += this.renderTodoHierarchyForAllProjects(subtasksWithProject, projectId, level + 1);
+            }
+            
+            return html;
+        }).join('');
     }
 
     renderArchiveProject(container) {
@@ -475,9 +524,7 @@ class TodoApp {
         }
 
         const filteredTodos = this.searchTerm 
-            ? archiveProject.todos.filter(todo => 
-                todo.text.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                (todo.originalProject && todo.originalProject.toLowerCase().includes(this.searchTerm.toLowerCase())))
+            ? this.filterTodosRecursive(archiveProject.todos, this.searchTerm)
             : archiveProject.todos;
 
         const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
@@ -492,26 +539,7 @@ class TodoApp {
                     </div>
                 </div>
                 <div class="todos-list">
-                    ${sortedTodos.length > 0 ? sortedTodos.map(todo => `
-                        <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" data-todo-id="${todo.id}">
-                            <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
-                                   ${todo.completed ? 'checked' : ''} 
-                                   onchange="app.toggleTodo('archive', '${todo.id}')">
-                            <div class="todo-content">
-                                <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
-                                ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                                ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
-                            </div>
-                            <div class="todo-actions">
-                                <button class="btn-small btn-edit" onclick="app.showEditTodoForm('archive', '${todo.id}')" title="Bearbeiten">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                </button>
-                                <button class="btn-small btn-delete" onclick="app.deleteTodo('archive', '${todo.id}')" title="Löschen">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('') : '<div class="no-todos">Keine Todos im Archiv gefunden</div>'}
+                    ${sortedTodos.length > 0 ? this.renderTodoHierarchyForArchive(sortedTodos, 'archive') : '<div class="no-todos">Keine Todos im Archiv gefunden</div>'}
                 </div>
             </div>
         `;
@@ -519,6 +547,62 @@ class TodoApp {
         if (this.searchTerm && sortedTodos.length === 0 && archiveProject.todos.length > 0) {
             container.querySelector('.todos-list').innerHTML = '<div class="no-results">Keine Archiv-Todos gefunden für "' + this.searchTerm + '"</div>';
         }
+    }
+
+    renderTodoHierarchyForArchive(todos, projectId, level = 0) {
+        return todos.map(todo => {
+            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
+            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
+            const marginLeft = level * 20;
+            
+            let html = `
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                     data-todo-id="${todo.id}" style="margin-left: ${marginLeft}px">
+                    <div class="todo-main-content">
+                        ${hasSubtasks ? `
+                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
+                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                </svg>
+                                <span class="subtask-count">(${todo.subtasks.length})</span>
+                            </button>
+                        ` : '<div class="subtask-spacer"></div>'}
+                        
+                        <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
+                               ${todo.completed ? 'checked' : ''} 
+                               onchange="app.toggleTodo('${projectId}', '${todo.id}')">
+                        <div class="todo-content">
+                            <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                            ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                            ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
+                        </div>
+                        <div class="todo-actions">
+                            ${level < 3 ? `
+                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                            <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add subtasks if not collapsed
+            if (hasSubtasks && !isCollapsed) {
+                html += this.renderTodoHierarchyForArchive(todo.subtasks, projectId, level + 1);
+            }
+            
+            return html;
+        }).join('');
     }
 
     getPriorityText(priority) {

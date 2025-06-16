@@ -1045,6 +1045,17 @@ body.dark-theme .add-subtask-form {
     border-left-color: #74b9ff;
 }
 
+.subtask-count {
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+body.dark-theme .subtask-count {
+    color: #aaa;
+}
+
 body.dark-theme .subtask-input,
 body.dark-theme .subtask-priority-select {
     background: #2d2d2d;
