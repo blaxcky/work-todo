@@ -527,7 +527,7 @@ class TodoApp {
             ? this.filterTodosRecursive(archiveProject.todos, this.searchTerm)
             : archiveProject.todos;
 
-        const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
+        const sortedTodos = this.sortTodosForArchive([...filteredTodos]);
 
         container.innerHTML = `
             <div class="project-section">
@@ -696,6 +696,32 @@ class TodoApp {
         sorted.forEach(todo => {
             if (todo.subtasks && todo.subtasks.length > 0) {
                 todo.subtasks = this.sortTodosByPriority(todo.subtasks);
+            }
+        });
+
+        return sorted;
+    }
+
+    sortTodosForArchive(todos) {
+        const sorted = todos.sort((a, b) => {
+            // Sortiere nach Archivierungsdatum (neuste zuerst)
+            if (a.archivedAt && b.archivedAt) {
+                const dateA = a.archivedAt instanceof Date ? a.archivedAt : new Date(a.archivedAt);
+                const dateB = b.archivedAt instanceof Date ? b.archivedAt : new Date(b.archivedAt);
+                const dateDiff = dateB - dateA; // Neuste zuerst
+                if (dateDiff !== 0) return dateDiff;
+            }
+            
+            // Falls kein Archivierungsdatum, nach Erstellungsdatum sortieren (neuste zuerst)
+            const createdA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+            const createdB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+            return createdB - createdA;
+        });
+
+        // Sort subtasks recursively with same logic
+        sorted.forEach(todo => {
+            if (todo.subtasks && todo.subtasks.length > 0) {
+                todo.subtasks = this.sortTodosForArchive(todo.subtasks);
             }
         });
 
@@ -1498,12 +1524,12 @@ class TodoApp {
             const completedTodos = project.todos.filter(todo => todo.completed);
             const remainingTodos = project.todos.filter(todo => !todo.completed);
             
-            // Füge erledigte Todos zum Archiv hinzu
+            // Füge erledigte Todos zum Archiv hinzu (am Anfang, damit neue oben stehen)
             completedTodos.forEach(todo => {
                 // Füge Projektinformation zum Todo hinzu
                 todo.originalProject = project.name;
                 todo.archivedAt = new Date();
-                archiveProject.todos.push(todo);
+                archiveProject.todos.unshift(todo); // unshift() fügt am Anfang hinzu
                 movedCount++;
             });
             
