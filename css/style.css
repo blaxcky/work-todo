@@ -235,21 +235,6 @@ body.dark-theme #todo-container {
     gap: 12px;
 }
 
-.archive-btn {
-    background: #9b59b6;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-}
-
-.archive-btn:hover {
-    background: #8e44ad;
-}
 
 .dropdown-menu {
     position: relative;
@@ -328,6 +313,132 @@ body.dark-theme #todo-container {
 
 .dropdown-item svg {
     flex-shrink: 0;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 8px 0;
+}
+
+.floating-archive-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #9b59b6;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(155, 89, 182, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 999;
+    animation: floatIn 0.4s ease-out;
+}
+
+@keyframes floatIn {
+    from {
+        opacity: 0;
+        transform: translateY(60px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.floating-archive-btn:hover {
+    background: #8e44ad;
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(155, 89, 182, 0.6);
+}
+
+.floating-archive-btn:active {
+    transform: scale(1.05);
+}
+
+.floating-archive-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    line-height: 1;
+}
+
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #27ae60;
+    padding: 16px;
+    z-index: 1001;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.4s ease;
+    max-width: 300px;
+}
+
+.toast-notification.toast-success {
+    border-left-color: #27ae60;
+}
+
+.toast-notification.toast-success .toast-icon {
+    color: #27ae60;
+}
+
+.toast-notification.toast-error {
+    border-left-color: #e74c3c;
+}
+
+.toast-notification.toast-error .toast-icon {
+    color: #e74c3c;
+}
+
+.toast-notification.toast-info {
+    border-left-color: #3498db;
+}
+
+.toast-notification.toast-info .toast-icon {
+    color: #3498db;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast-icon {
+    flex-shrink: 0;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 500;
 }
 
 .search-input {
@@ -1324,12 +1435,27 @@ body.dark-theme .dropdown-item:hover {
     background: #3a3a3a;
 }
 
-body.dark-theme .archive-btn {
-    background: #9b59b6;
+body.dark-theme .dropdown-divider {
+    background: #555;
 }
 
-body.dark-theme .archive-btn:hover {
+body.dark-theme .floating-archive-btn {
+    background: #9b59b6;
+    box-shadow: 0 4px 20px rgba(155, 89, 182, 0.6);
+}
+
+body.dark-theme .floating-archive-btn:hover {
     background: #8e44ad;
+    box-shadow: 0 6px 25px rgba(155, 89, 182, 0.8);
+}
+
+body.dark-theme .toast-notification {
+    background: #2d2d2d;
+    border-left-color: #27ae60;
+}
+
+body.dark-theme .toast-message {
+    color: #e0e0e0;
 }
 
 /* Dark Theme Modal */

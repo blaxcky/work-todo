@@ -61,7 +61,6 @@
                         <button id="clear-search" class="btn-small" style="display: none;">✕</button>
                     </div>
                     <div class="header-right">
-                        <button id="archive-btn" class="archive-btn">📦 Archivieren</button>
                         <div class="dropdown-menu">
                             <button id="menu-toggle" class="menu-toggle" title="Menü">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,6 +70,15 @@
                                 </svg>
                             </button>
                             <div id="dropdown-content" class="dropdown-content">
+                                <button id="archive-btn" class="dropdown-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <path d="m9 9 3 3 3-3"></path>
+                                        <path d="M12 12v9"></path>
+                                    </svg>
+                                    Erledigte archivieren
+                                </button>
+                                <div class="dropdown-divider"></div>
                                 <button id="import-btn" class="dropdown-item">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -186,6 +194,29 @@
                         <button id="archive-confirm" class="btn-danger">Archivieren</button>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Floating Archive Button -->
+        <button id="floating-archive-btn" class="floating-archive-btn" style="display: none;" title="Erledigte Todos archivieren">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <path d="m9 9 3 3 3-3"></path>
+                <path d="M12 12v9"></path>
+            </svg>
+            <span id="floating-archive-badge" class="floating-archive-badge"></span>
+        </button>
+        
+        <!-- Toast Notification -->
+        <div id="toast-notification" class="toast-notification">
+            <div class="toast-content">
+                <div class="toast-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9,11 12,14 22,4"></polyline>
+                        <path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path>
+                    </svg>
+                </div>
+                <div class="toast-message"></div>
             </div>
         </div>
     </div>

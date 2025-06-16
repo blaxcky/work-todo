@@ -330,6 +330,22 @@ class TodoApp {
         }
         
         this.updatePageTitle();
+        this.updateFloatingArchiveButton();
+    }
+
+    updateFloatingArchiveButton() {
+        const floatingBtn = document.getElementById('floating-archive-btn');
+        const badge = document.getElementById('floating-archive-badge');
+        const completedCount = this.countCompletedTodos();
+        
+        // Zeige den Button nur wenn es erledigte Todos gibt und nicht im Archiv
+        if (completedCount > 0 && this.currentProjectId !== 'archive') {
+            floatingBtn.style.display = 'flex';
+            badge.textContent = completedCount;
+            floatingBtn.title = `${completedCount} erledigte Todo${completedCount === 1 ? '' : 's'} archivieren`;
+        } else {
+            floatingBtn.style.display = 'none';
+        }
     }
 
     renderSingleProject(container) {
@@ -1095,6 +1111,11 @@ class TodoApp {
         });
 
         document.getElementById('archive-btn').addEventListener('click', () => {
+            this.closeDropdownMenu();
+            this.showArchiveModal();
+        });
+
+        document.getElementById('floating-archive-btn').addEventListener('click', () => {
             this.showArchiveModal();
         });
 
@@ -1214,6 +1235,25 @@ class TodoApp {
         dropdown.classList.remove('show');
     }
 
+    showToast(message, type = 'success') {
+        const toast = document.getElementById('toast-notification');
+        const messageElement = toast.querySelector('.toast-message');
+        
+        // Reset classes
+        toast.classList.remove('toast-success', 'toast-error', 'toast-info');
+        
+        // Add appropriate class
+        toast.classList.add(`toast-${type}`);
+        
+        messageElement.textContent = message;
+        toast.classList.add('show');
+        
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 4000);
+    }
+
     applyTheme() {
         const body = document.body;
         const themeToggle = document.getElementById('theme-toggle');
@@ -1264,7 +1304,7 @@ class TodoApp {
     showArchiveModal() {
         const completedCount = this.countCompletedTodos();
         if (completedCount === 0) {
-            alert('Keine erledigten Todos zum Archivieren gefunden.');
+            this.showToast('Keine erledigten Todos zum Archivieren gefunden.', 'info');
             return;
         }
         
@@ -1343,7 +1383,7 @@ class TodoApp {
         const fileExtension = file.name.split('.').pop().toLowerCase();
         
         if (!allowedTypes.includes(file.type) && !['json', 'csv'].includes(fileExtension)) {
-            alert('Bitte wählen Sie eine JSON oder CSV Datei aus.');
+            this.showToast('Bitte wählen Sie eine JSON oder CSV Datei aus.', 'error');
             return;
         }
 
@@ -1398,9 +1438,9 @@ class TodoApp {
             this.render();
             this.hideImportModal();
             
-            alert(`Daten erfolgreich importiert! ${mode === 'replace' ? 'Ersetzt' : 'Zusammengeführt'}`);
+            this.showToast(`Daten erfolgreich importiert! ${mode === 'replace' ? 'Ersetzt' : 'Zusammengeführt'}`);
         } catch (error) {
-            alert(`Fehler beim Importieren: ${error.message}`);
+            this.showToast(`Fehler beim Importieren: ${error.message}`, 'error');
         }
     }
 
@@ -1558,7 +1598,24 @@ class TodoApp {
     countCompletedTodos() {
         let count = 0;
         this.projects.forEach(project => {
-            count += project.todos.filter(todo => todo.completed).length;
+            // Exclude archive project from completed todos count
+            if (project.id !== 'archive') {
+                count += this.countCompletedTodosInList(project.todos);
+            }
+        });
+        return count;
+    }
+
+    countCompletedTodosInList(todos) {
+        let count = 0;
+        todos.forEach(todo => {
+            if (todo.completed) {
+                count++;
+            }
+            // Count completed subtasks recursively
+            if (todo.subtasks && todo.subtasks.length > 0) {
+                count += this.countCompletedTodosInList(todo.subtasks);
+            }
         });
         return count;
     }
@@ -1567,9 +1624,9 @@ class TodoApp {
         const archiveProject = this.getOrCreateArchiveProject();
         let movedCount = 0;
 
-        // Gehe durch alle Projekte und verschiebe erledigte Todos
+        // Gehe durch alle Projekte und verschiebe erledigte Todos (außer Archiv)
         this.projects.forEach(project => {
-            if (project.id === archiveProject.id) return; // Skip das Archiv-Projekt selbst
+            if (project.id === archiveProject.id || project.id === 'archive') return; // Skip das Archiv-Projekt selbst
             
             const completedTodos = project.todos.filter(todo => todo.completed);
             const remainingTodos = project.todos.filter(todo => !todo.completed);
@@ -1592,7 +1649,7 @@ class TodoApp {
         this.render();
         this.hideArchiveModal();
         
-        alert(`${movedCount} erledigte Todo${movedCount === 1 ? '' : 's'} wurden ins Archiv verschoben.`);
+        this.showToast(`${movedCount} erledigte Todo${movedCount === 1 ? '' : 's'} wurden ins Archiv verschoben.`);
     }
 
     getOrCreateArchiveProject() {
