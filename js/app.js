@@ -1180,10 +1180,24 @@ class TodoApp {
                 this.submitSubtask(projectId, parentId);
             }
             
+            // Event listener für Edit-Todo-Eingabefelder
+            if (e.target.classList.contains('edit-input') && e.key === 'Enter') {
+                const todoId = e.target.id.replace('edit-text-', '');
+                const projectId = this.currentProjectId;
+                this.saveEditTodo(projectId, todoId);
+            }
+            
             // ESC zum Abbrechen von Subtask-Formularen
             if (e.key === 'Escape' && e.target.classList.contains('subtask-input')) {
                 const parentId = e.target.id.replace('subtask-text-', '');
                 this.cancelAddSubtask(parentId);
+            }
+            
+            // ESC zum Abbrechen von Edit-Formularen
+            if (e.key === 'Escape' && e.target.classList.contains('edit-input')) {
+                const todoId = e.target.id.replace('edit-text-', '');
+                const projectId = this.currentProjectId;
+                this.cancelEditTodo(projectId, todoId);
             }
         });
 
