@@ -1721,6 +1721,71 @@ body.dark-theme .project-header {
     border-bottom-color: #555;
 }
 
+/* Completed Section Styles */
+.completed-section {
+    margin-top: 30px;
+    border-top: 2px solid #e9ecef;
+    padding-top: 20px;
+}
+
+.completed-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    font-weight: 500;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.completed-header:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+    color: #495057;
+}
+
+.completed-toggle-icon {
+    transition: transform 0.3s ease;
+    transform: rotate(0deg);
+    flex-shrink: 0;
+}
+
+.completed-todos {
+    border-left: 3px solid #e9ecef;
+    margin-left: 16px;
+    padding-left: 16px;
+    background: rgba(248, 249, 250, 0.5);
+    border-radius: 0 8px 8px 0;
+}
+
+/* Dark theme completed section */
+body.dark-theme .completed-section {
+    border-top-color: #555;
+}
+
+body.dark-theme .completed-header {
+    background: #3a3a3a;
+    border-color: #555;
+    color: #aaa;
+}
+
+body.dark-theme .completed-header:hover {
+    background: #404040;
+    border-color: #666;
+    color: #ccc;
+}
+
+body.dark-theme .completed-todos {
+    border-left-color: #555;
+    background: rgba(42, 42, 42, 0.5);
+}
+
 /* Export Modal */
 .modal {
     position: fixed;
