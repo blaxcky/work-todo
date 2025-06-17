@@ -342,13 +342,13 @@ class TodoApp {
     updateFloatingArchiveButton() {
         const floatingBtn = document.getElementById('floating-archive-btn');
         const badge = document.getElementById('floating-archive-badge');
-        const completedCount = this.countCompletedTodos();
+        const completedMainTodosCount = this.countCompletedMainTodos();
         
-        // Zeige den Button nur wenn es erledigte Todos gibt und nicht im Archiv
-        if (completedCount > 0 && this.currentProjectId !== 'archive') {
+        // Zeige den Button nur wenn es erledigte Main-Todos gibt und nicht im Archiv
+        if (completedMainTodosCount > 0 && this.currentProjectId !== 'archive') {
             floatingBtn.style.display = 'flex';
-            badge.textContent = completedCount;
-            floatingBtn.title = `${completedCount} erledigte Todo${completedCount === 1 ? '' : 's'} archivieren`;
+            badge.textContent = completedMainTodosCount;
+            floatingBtn.title = `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} archivieren`;
         } else {
             floatingBtn.style.display = 'none';
         }
@@ -1408,14 +1408,14 @@ class TodoApp {
     }
 
     showArchiveModal() {
-        const completedCount = this.countCompletedTodos();
-        if (completedCount === 0) {
-            this.showToast('Keine erledigten Todos zum Archivieren gefunden.', 'info');
+        const completedMainTodosCount = this.countCompletedMainTodos();
+        if (completedMainTodosCount === 0) {
+            this.showToast('Keine erledigten Main-Todos zum Archivieren gefunden.', 'info');
             return;
         }
         
         document.getElementById('archive-count-text').textContent = 
-            `${completedCount} erledigte Todo${completedCount === 1 ? '' : 's'} werden in das Projekt "Archiv" verschoben.`;
+            `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} werden in das Projekt "Archiv" verschoben.`;
         document.getElementById('archive-modal').style.display = 'flex';
     }
 
@@ -1707,6 +1707,17 @@ class TodoApp {
             // Exclude archive project from completed todos count
             if (project.id !== 'archive') {
                 count += this.countCompletedTodosInList(project.todos);
+            }
+        });
+        return count;
+    }
+
+    countCompletedMainTodos() {
+        let count = 0;
+        this.projects.forEach(project => {
+            // Exclude archive project and only count main-level completed todos
+            if (project.id !== 'archive') {
+                count += project.todos.filter(todo => todo.completed).length;
             }
         });
         return count;
