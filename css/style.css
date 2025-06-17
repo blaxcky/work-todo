@@ -1227,12 +1227,12 @@ body.dark-theme .btn-cancel:hover {
 .btn-add-subtask {
     background: transparent;
     color: #27ae60;
-    border: 1px solid #27ae60;
+    border: none;
 }
 
 .btn-add-subtask:hover {
-    background: #27ae60;
-    color: white;
+    background: #f8f9fa;
+    color: #27ae60;
     transform: scale(1.1);
 }
 
@@ -1275,12 +1275,12 @@ body.dark-theme .subtask-toggle:hover {
 
 body.dark-theme .btn-add-subtask {
     color: #27ae60;
-    border-color: #27ae60;
+    border: none;
 }
 
 body.dark-theme .btn-add-subtask:hover {
-    background: #27ae60;
-    color: white;
+    background: #3a3a3a;
+    color: #27ae60;
 }
 
 body.dark-theme .add-subtask-form {
