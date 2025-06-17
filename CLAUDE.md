@@ -46,6 +46,41 @@ Todos sollen in Projekte organisiert werden können.
 - [ ] Todo-Kategorien/Farben
 - [ ] Benachrichtigungen für Deadlines
 
+## Design-Modernisierung Roadmap 🎨
+
+### Moderne Designelemente
+- [ ] **Border-Radius & Glassmorphism**: Abgerundete Ecken (8px-16px) statt `border-radius: 0`
+- [ ] **Glassmorphism-Effekte**: Sidebar und Cards mit `backdrop-filter: blur(20px)`
+- [ ] **Weiche Schatten**: Größere, weichere Box-Shadows statt harte Kanten
+- [ ] **Gradient-Backgrounds**: Sidebar und Header mit subtilen linearen Gradienten
+- [ ] **CSS Custom Properties**: Einheitliche Farbvariablen für bessere Wartbarkeit
+
+### Erweiterte Animationen
+- [ ] **Ripple-Effekte**: Bei Button-Klicks (Material Design Style)
+- [ ] **Elastic Hover**: Buttons mit `scale()` und `ease-out` Timing
+- [ ] **Loading-Spinner**: Für Todo-Erstellung/Speicherung
+- [ ] **Pulse-Animationen**: Für wichtige Buttons oder überfällige Todos
+- [ ] **Slide-In Animationen**: Neue Todos gleiten von links/rechts ein
+- [ ] **Stagger-Animationen**: Todo-Liste mit versetzten Einblendungen
+- [ ] **Completion-Animation**: Checkbox mit Konfetti/Checkmark-Animation
+- [ ] **Priority-Animations**: Hohe Priorität leicht pulsierend, überfällige Todos mit rotem Glow
+
+### UI/UX Verbesserungen
+- [ ] **CSS Grid**: Modernere Layouts statt reines Flexbox
+- [ ] **Container Queries**: Für bessere Responsive-Komponenten
+- [ ] **Fluid Typography**: `clamp()` für bessere Skalierung
+- [ ] **Floating Labels**: Input-Labels die nach oben gleiten
+- [ ] **Toggle-Switches**: Statt einfachen Checkboxen für Settings
+- [ ] **Progress-Indicators**: Für mehrstufige Aktionen
+- [ ] **Skeleton-Loading**: Statt leere Zustände
+
+### Performance & Accessibility
+- [ ] **Focus-Rings**: Moderne, sichtbare Focus-Indikatoren
+- [ ] **High-Contrast**: Bessere Farb-Kontraste
+- [ ] **Reduced-Motion**: `prefers-reduced-motion` Media Query
+- [ ] **GPU-Animationen**: `transform` und `opacity` für bessere Performance
+- [ ] **Custom Scroll-Bars**: Moderne, schlanke Scrollbars
+
 ## Technische Schulden
 
 - [ ] Tests schreiben (Unit, Integration)
@@ -53,10 +88,6 @@ Todos sollen in Projekte organisiert werden können.
 - [ ] Performance-Optimierung
 - [ ] Accessibility (a11y) Standards
 - [ ] Browser-Kompatibilität testen 
-
-## Technische Schulden
-
-- [ ] 
 
 ## Notizen
 
