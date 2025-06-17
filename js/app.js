@@ -590,8 +590,12 @@ class TodoApp {
                             ${level < 3 ? `
                                 <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <path d="M8 6h13"></path>
+                                        <path d="M8 12h13"></path>
+                                        <path d="M8 18h13"></path>
+                                        <path d="M3 6h.01"></path>
+                                        <path d="M3 12h.01"></path>
+                                        <path d="M3 18h.01"></path>
                                     </svg>
                                 </button>
                             ` : ''}
@@ -849,8 +853,12 @@ class TodoApp {
                         ${level < 3 ? `
                             <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <path d="M8 6h13"></path>
+                                    <path d="M8 12h13"></path>
+                                    <path d="M8 18h13"></path>
+                                    <path d="M3 6h.01"></path>
+                                    <path d="M3 12h.01"></path>
+                                    <path d="M3 18h.01"></path>
                                 </svg>
                             </button>
                         ` : ''}
