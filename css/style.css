@@ -569,6 +569,12 @@ body.dark-theme #todo-container {
     transform: translateY(0);
 }
 
+.todo-item:hover {
+    background: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .todo-item.has-visible-subtasks {
     border-bottom: none;
 }
@@ -1098,6 +1104,12 @@ body.dark-theme .project-title {
 body.dark-theme .todo-item {
     background: transparent;
     border-bottom-color: #444;
+}
+
+body.dark-theme .todo-item:hover {
+    background: #3a3a3a;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 body.dark-theme .todo-item.has-visible-subtasks {
