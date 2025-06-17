@@ -366,25 +366,8 @@ class TodoApp {
             <div class="project-section">
                 <div class="add-todo-form">
                     <div class="input-row">
-                        <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen..." class="todo-input" autocomplete="off" autocorrect="off" spellcheck="false">
+                        <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="todo-input" autocomplete="off" autocorrect="off" spellcheck="false">
                         <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)" autocomplete="off">
-                        <div class="priority-radio-group">
-                            <label class="priority-radio">
-                                <input type="radio" name="priority-${currentProject.id}" value="high" class="radio-input">
-                                <span class="radio-custom priority-high"></span>
-                                <span class="radio-label">Hoch</span>
-                            </label>
-                            <label class="priority-radio">
-                                <input type="radio" name="priority-${currentProject.id}" value="medium" class="radio-input" checked>
-                                <span class="radio-custom priority-medium"></span>
-                                <span class="radio-label">Mittel</span>
-                            </label>
-                            <label class="priority-radio">
-                                <input type="radio" name="priority-${currentProject.id}" value="low" class="radio-input">
-                                <span class="radio-custom priority-low"></span>
-                                <span class="radio-label">Niedrig</span>
-                            </label>
-                        </div>
                         <button onclick="app.submitTodo('${currentProject.id}')" class="add-btn">+</button>
                     </div>
                 </div>
@@ -858,31 +841,61 @@ class TodoApp {
     }
 
 
+    parsePriorityFromText(text) {
+        // Regex für p1, p2, p3 (case-insensitive)
+        const priorityRegex = /\b(p[123])\b/i;
+        const match = text.match(priorityRegex);
+        
+        if (match) {
+            const priorityCode = match[1].toLowerCase();
+            const cleanedText = text.replace(priorityRegex, '').trim();
+            
+            let priority;
+            switch (priorityCode) {
+                case 'p1':
+                    priority = 'high';
+                    break;
+                case 'p2':
+                    priority = 'medium';
+                    break;
+                case 'p3':
+                    priority = 'low';
+                    break;
+                default:
+                    priority = 'medium';
+            }
+            
+            return { text: cleanedText, priority };
+        }
+        
+        return { text, priority: null };
+    }
+
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
         const dateInput = document.getElementById(`todo-date-${projectId}`);
-        const priorityRadios = document.querySelectorAll(`input[name="priority-${projectId}"]:checked`);
         
-        const text = textInput.value.trim();
+        const originalText = textInput.value.trim();
         const dueDate = dateInput.value ? new Date(dateInput.value) : null;
-        const priority = priorityRadios.length > 0 ? priorityRadios[0].value : 'medium';
         
-        if (text) {
-            this.addTodo(projectId, text, priority, dueDate);
+        if (originalText) {
+            // Parse Priorität aus dem Text
+            const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
+            
+            // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
+            const finalPriority = parsedPriority || 'medium';
+            
+            this.addTodo(projectId, text, finalPriority, dueDate);
             // Nach dem Re-Rendering die neuen Elemente finden und Fokus setzen
             setTimeout(() => {
                 const newTextInput = document.getElementById(`todo-text-${projectId}`);
                 const newDateInput = document.getElementById(`todo-date-${projectId}`);
-                const newPriorityRadio = document.querySelector(`input[name="priority-${projectId}"][value="medium"]`);
                 if (newTextInput) {
                     newTextInput.value = '';
                     newTextInput.focus();
                 }
                 if (newDateInput) {
                     newDateInput.value = '';
-                }
-                if (newPriorityRadio) {
-                    newPriorityRadio.checked = true;
                 }
             }, 0);
         }
@@ -933,13 +946,19 @@ class TodoApp {
     }
 
     saveEditTodo(projectId, todoId) {
-        const newText = document.getElementById(`edit-text-${todoId}`).value.trim();
+        const originalText = document.getElementById(`edit-text-${todoId}`).value.trim();
         const newDateValue = document.getElementById(`edit-date-${todoId}`).value;
         const newDueDate = newDateValue ? new Date(newDateValue) : null;
-        const newPriority = document.getElementById(`edit-priority-${todoId}`).value;
+        const selectPriority = document.getElementById(`edit-priority-${todoId}`).value;
         
-        if (newText) {
-            this.editTodo(projectId, todoId, newText, newPriority, newDueDate);
+        if (originalText) {
+            // Parse Priorität aus dem Text
+            const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
+            
+            // Verwende geparste Priorität, falls vorhanden, sonst Select-Wert
+            const finalPriority = parsedPriority || selectPriority;
+            
+            this.editTodo(projectId, todoId, text, finalPriority, newDueDate);
         }
     }
 
@@ -982,11 +1001,17 @@ class TodoApp {
         const textInput = document.getElementById(`subtask-text-${parentId}`);
         const prioritySelect = document.getElementById(`subtask-priority-${parentId}`);
         
-        const text = textInput.value.trim();
-        const priority = prioritySelect.value;
+        const originalText = textInput.value.trim();
+        const selectPriority = prioritySelect.value;
         
-        if (text) {
-            this.addSubtask(projectId, parentId, text, priority);
+        if (originalText) {
+            // Parse Priorität aus dem Text
+            const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
+            
+            // Verwende geparste Priorität, falls vorhanden, sonst Select-Wert
+            const finalPriority = parsedPriority || selectPriority;
+            
+            this.addSubtask(projectId, parentId, text, finalPriority);
             this.cancelAddSubtask(parentId);
         }
     }
