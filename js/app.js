@@ -292,6 +292,12 @@ class TodoApp {
                 ` : ''}
             `;
             
+            // Add drop zone functionality to project items
+            projectItem.addEventListener('dragover', (e) => this.handleDragOver(e));
+            projectItem.addEventListener('drop', (e) => this.handleDrop(e, project.id));
+            projectItem.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+            projectItem.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+            
             projectList.appendChild(projectItem);
         });
     }
@@ -461,7 +467,11 @@ class TodoApp {
             
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                     data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
+                     data-todo-id="${todo.id}" data-project-id="${todo.projectId}" 
+                     draggable="true" 
+                     ondragstart="app.handleDragStart(event)" 
+                     ondragend="app.handleDragEnd(event)" 
+                     style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
@@ -567,7 +577,11 @@ class TodoApp {
             
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                     data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
+                     data-todo-id="${todo.id}" data-project-id="${projectId}" 
+                     draggable="true" 
+                     ondragstart="app.handleDragStart(event)" 
+                     ondragend="app.handleDragEnd(event)" 
+                     style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
@@ -832,7 +846,11 @@ class TodoApp {
         
         let html = `
             <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                 data-todo-id="${todo.id}" style="padding-left: ${marginLeft + 12}px">
+                 data-todo-id="${todo.id}" data-project-id="${projectId}" 
+                 draggable="true" 
+                 ondragstart="app.handleDragStart(event)" 
+                 ondragend="app.handleDragEnd(event)" 
+                 style="padding-left: ${marginLeft + 12}px">
                 <div class="todo-main-content">
                     ${hasSubtasks ? `
                         <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
@@ -1845,6 +1863,135 @@ class TodoApp {
                 icon.style.transform = 'rotate(90deg)';
             }
         });
+    }
+
+    handleDragStart(event) {
+        const todoElement = event.currentTarget;
+        const todoId = todoElement.dataset.todoId;
+        const projectId = todoElement.dataset.projectId;
+        
+        // Store drag data
+        this.dragData = {
+            todoId: todoId,
+            sourceProjectId: projectId
+        };
+        
+        // Add visual feedback
+        todoElement.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', todoId);
+    }
+
+    handleDragEnd(event) {
+        const todoElement = event.currentTarget;
+        todoElement.classList.remove('dragging');
+        
+        // Remove drag feedback from all elements
+        document.querySelectorAll('.project-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+        
+        // Clear drag data
+        this.dragData = null;
+    }
+
+    handleDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    }
+
+    handleDragEnter(event) {
+        event.preventDefault();
+        if (this.dragData) {
+            const projectItem = event.currentTarget;
+            projectItem.classList.add('drag-over');
+        }
+    }
+
+    handleDragLeave(event) {
+        const projectItem = event.currentTarget;
+        // Only remove if really leaving the element
+        if (!projectItem.contains(event.relatedTarget)) {
+            projectItem.classList.remove('drag-over');
+        }
+    }
+
+    handleDrop(event, targetProjectId) {
+        event.preventDefault();
+        const projectItem = event.currentTarget;
+        projectItem.classList.remove('drag-over');
+        
+        if (!this.dragData || !targetProjectId) return;
+        
+        const { todoId, sourceProjectId } = this.dragData;
+        
+        // Don't do anything if dropping on the same project
+        if (sourceProjectId === targetProjectId) return;
+        
+        // Don't allow dropping into archive project from UI
+        if (targetProjectId === 'archive') return;
+        
+        this.moveTodoToProject(todoId, sourceProjectId, targetProjectId);
+    }
+
+    moveTodoToProject(todoId, sourceProjectId, targetProjectId) {
+        const sourceProject = this.projects.find(p => p.id === sourceProjectId);
+        const targetProject = this.projects.find(p => p.id === targetProjectId);
+        
+        if (!sourceProject || !targetProject) {
+            console.error('Source or target project not found');
+            return;
+        }
+        
+        // Find and remove the todo from source project
+        const todo = this.findAndRemoveTodo(sourceProject, todoId);
+        if (!todo) {
+            console.error('Todo not found in source project');
+            return;
+        }
+        
+        // Add todo to target project
+        targetProject.todos.push(todo);
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+        
+        // Show success message
+        this.showToast(`Todo zu "${targetProject.name}" verschoben`, 'success');
+    }
+
+    findAndRemoveTodo(project, todoId) {
+        // Check main todos
+        const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
+        if (mainTodoIndex !== -1) {
+            return project.todos.splice(mainTodoIndex, 1)[0];
+        }
+        
+        // Check subtasks recursively
+        for (let todo of project.todos) {
+            const foundTodo = this.findAndRemoveFromSubtasks(todo, todoId);
+            if (foundTodo) return foundTodo;
+        }
+        
+        return null;
+    }
+
+    findAndRemoveFromSubtasks(todo, todoId) {
+        if (!todo.subtasks) return null;
+        
+        const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
+        if (subtaskIndex !== -1) {
+            return todo.subtasks.splice(subtaskIndex, 1)[0];
+        }
+        
+        // Search in nested subtasks
+        for (let subtask of todo.subtasks) {
+            const foundTodo = this.findAndRemoveFromSubtasks(subtask, todoId);
+            if (foundTodo) return foundTodo;
+        }
+        
+        return null;
     }
 }
 
