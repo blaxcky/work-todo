@@ -2208,21 +2208,40 @@ body.dark-theme .completed-todos {
 }
 
 /* Drag and Drop Styles */
+.drag-handle {
+    width: 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #bdc3c7;
+    opacity: 0;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.drag-handle:hover {
+    background-color: rgba(189, 195, 199, 0.2);
+    color: #7f8c8d;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    background-color: rgba(189, 195, 199, 0.3);
+}
+
+.todo-item:hover .drag-handle {
+    opacity: 1;
+}
+
 .todo-item.dragging {
     opacity: 0.5;
     transform: scale(0.98);
-    cursor: grabbing;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-}
-
-.todo-item[draggable="true"] {
-    cursor: grab;
-    transition: all 0.2s ease;
-}
-
-.todo-item[draggable="true"]:hover {
-    background-color: rgba(52, 152, 219, 0.05);
 }
 
 .project-item.drag-over {
@@ -2247,28 +2266,20 @@ body.dark-theme .completed-todos {
     border-color: #2196f3 !important;
 }
 
-.dark-theme .todo-item[draggable="true"]:hover {
-    background-color: rgba(52, 152, 219, 0.1);
+.dark-theme .drag-handle {
+    color: #5a6c7d;
+}
+
+.dark-theme .drag-handle:hover {
+    background-color: rgba(90, 108, 125, 0.2);
+    color: #8fa3b3;
+}
+
+.dark-theme .drag-handle:active {
+    background-color: rgba(90, 108, 125, 0.3);
 }
 
 .project-item {
     transition: all 0.2s ease;
     border: 2px solid transparent;
-}
-
-/* Visual indicator for draggable items */
-.todo-item[draggable="true"]::before {
-    content: "⋮⋮";
-    position: absolute;
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #bdc3c7;
-    font-size: 12px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.todo-item[draggable="true"]:hover::before {
-    opacity: 1;
 }

@@ -468,11 +468,23 @@ class TodoApp {
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
                      data-todo-id="${todo.id}" data-project-id="${todo.projectId}" 
-                     draggable="true" 
-                     ondragstart="app.handleDragStart(event)" 
-                     ondragend="app.handleDragEnd(event)" 
                      style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
+                        <div class="drag-handle" 
+                             draggable="true" 
+                             onmousedown="app.handleDragStart(event)" 
+                             ondragstart="app.handleDragStart(event)" 
+                             ondragend="app.handleDragEnd(event)" 
+                             title="Zum Verschieben ziehen">
+                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
+                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
+                            </svg>
+                        </div>
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
@@ -578,11 +590,23 @@ class TodoApp {
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
                      data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                     draggable="true" 
-                     ondragstart="app.handleDragStart(event)" 
-                     ondragend="app.handleDragEnd(event)" 
                      style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
+                        <div class="drag-handle" 
+                             draggable="true" 
+                             onmousedown="app.handleDragStart(event)" 
+                             ondragstart="app.handleDragStart(event)" 
+                             ondragend="app.handleDragEnd(event)" 
+                             title="Zum Verschieben ziehen">
+                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
+                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
+                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
+                            </svg>
+                        </div>
                         ${hasSubtasks ? `
                             <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
@@ -847,11 +871,23 @@ class TodoApp {
         let html = `
             <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
                  data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                 draggable="true" 
-                 ondragstart="app.handleDragStart(event)" 
-                 ondragend="app.handleDragEnd(event)" 
                  style="padding-left: ${marginLeft + 12}px">
                 <div class="todo-main-content">
+                    <div class="drag-handle" 
+                         draggable="true" 
+                         onmousedown="app.handleDragStart(event)" 
+                         ondragstart="app.handleDragStart(event)" 
+                         ondragend="app.handleDragEnd(event)" 
+                         title="Zum Verschieben ziehen">
+                        <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="3" cy="3" r="1" fill="currentColor"/>
+                            <circle cx="9" cy="3" r="1" fill="currentColor"/>
+                            <circle cx="3" cy="8" r="1" fill="currentColor"/>
+                            <circle cx="9" cy="8" r="1" fill="currentColor"/>
+                            <circle cx="3" cy="13" r="1" fill="currentColor"/>
+                            <circle cx="9" cy="13" r="1" fill="currentColor"/>
+                        </svg>
+                    </div>
                     ${hasSubtasks ? `
                         <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
@@ -1866,7 +1902,20 @@ class TodoApp {
     }
 
     handleDragStart(event) {
-        const todoElement = event.currentTarget;
+        // Only allow drag if initiated from drag handle
+        if (!event.target.closest('.drag-handle')) {
+            event.preventDefault();
+            return false;
+        }
+        
+        const dragHandle = event.currentTarget;
+        const todoElement = dragHandle.closest('.todo-item');
+        
+        if (!todoElement) {
+            event.preventDefault();
+            return false;
+        }
+        
         const todoId = todoElement.dataset.todoId;
         const projectId = todoElement.dataset.projectId;
         
@@ -1876,15 +1925,27 @@ class TodoApp {
             sourceProjectId: projectId
         };
         
-        // Add visual feedback
+        // Add visual feedback to the todo item
         todoElement.classList.add('dragging');
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', todoId);
+        
+        // Create a custom drag image (optional)
+        const dragImage = todoElement.cloneNode(true);
+        dragImage.style.transform = 'scale(0.8)';
+        dragImage.style.opacity = '0.8';
+        document.body.appendChild(dragImage);
+        event.dataTransfer.setDragImage(dragImage, 0, 0);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
     }
 
     handleDragEnd(event) {
-        const todoElement = event.currentTarget;
-        todoElement.classList.remove('dragging');
+        const dragHandle = event.currentTarget;
+        const todoElement = dragHandle.closest('.todo-item');
+        
+        if (todoElement) {
+            todoElement.classList.remove('dragging');
+        }
         
         // Remove drag feedback from all elements
         document.querySelectorAll('.project-item').forEach(item => {
