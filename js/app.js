@@ -985,8 +985,10 @@ class TodoApp {
                 </div>
             `;
             
-            // Focus on the text input
-            document.getElementById(`edit-text-${todoId}`).focus();
+            // Focus on the text input and set cursor to end
+            const textInput = document.getElementById(`edit-text-${todoId}`);
+            textInput.focus();
+            textInput.setSelectionRange(textInput.value.length, textInput.value.length);
         }
     }
 
