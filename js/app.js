@@ -1010,13 +1010,8 @@ class TodoApp {
         if (mainContent) {
             mainContent.innerHTML = `
                 <div class="edit-todo-form">
-                    <input type="text" id="edit-text-${todoId}" value="${todo.text.replace(/"/g, '&quot;')}" class="edit-input" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="text" id="edit-text-${todoId}" value="${todo.text.replace(/"/g, '&quot;')}" class="edit-input" placeholder="Text bearbeiten... (p1=hoch, p2=mittel, p3=niedrig)" autocomplete="off" autocorrect="off" spellcheck="false">
                     <input type="date" id="edit-date-${todoId}" value="${dueDateValue}" class="edit-date-input" title="Fälligkeitsdatum" autocomplete="off">
-                    <select id="edit-priority-${todoId}" class="edit-select">
-                        <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Niedrig</option>
-                        <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Mittel</option>
-                        <option value="high" ${todo.priority === 'high' ? 'selected' : ''}>Hoch</option>
-                    </select>
                     <button onclick="app.saveEditTodo('${projectId}', '${todoId}')" class="btn-small" title="Speichern">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
                     </button>
@@ -1035,14 +1030,15 @@ class TodoApp {
         const originalText = document.getElementById(`edit-text-${todoId}`).value.trim();
         const newDateValue = document.getElementById(`edit-date-${todoId}`).value;
         const newDueDate = newDateValue ? new Date(newDateValue) : null;
-        const selectPriority = document.getElementById(`edit-priority-${todoId}`).value;
         
         if (originalText) {
             // Parse Priorität aus dem Text
             const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
             
-            // Verwende geparste Priorität, falls vorhanden, sonst Select-Wert
-            const finalPriority = parsedPriority || selectPriority;
+            // Verwende geparste Priorität, falls vorhanden, sonst behalte die aktuelle Priorität
+            const project = this.projects.find(p => p.id === projectId);
+            const currentTodo = this.findTodoById(project, todoId);
+            const finalPriority = parsedPriority || currentTodo.priority;
             
             this.editTodo(projectId, todoId, text, finalPriority, newDueDate);
         }

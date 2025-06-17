@@ -984,14 +984,11 @@ body.dark-theme #todo-container {
 
 .edit-input {
     flex: 1;
+    min-width: 200px;
 }
 
 .edit-date-input {
     width: 130px;
-}
-
-.edit-select {
-    width: 100px;
 }
 
 .no-results {
