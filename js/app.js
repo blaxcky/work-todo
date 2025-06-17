@@ -977,12 +977,7 @@ class TodoApp {
         const formHtml = `
             <div class="add-subtask-form" style="margin-left: 40px; margin-top: 8px;">
                 <div class="subtask-input-row">
-                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen..." class="subtask-input" autocomplete="off" autocorrect="off" spellcheck="false">
-                    <select id="subtask-priority-${parentId}" class="subtask-priority-select">
-                        <option value="low">Niedrig</option>
-                        <option value="medium" selected>Mittel</option>
-                        <option value="high">Hoch</option>
-                    </select>
+                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="subtask-input" autocomplete="off" autocorrect="off" spellcheck="false">
                     <button onclick="app.submitSubtask('${projectId}', '${parentId}')" class="btn-small btn-confirm" title="Hinzufügen">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
                     </button>
@@ -999,17 +994,15 @@ class TodoApp {
 
     submitSubtask(projectId, parentId) {
         const textInput = document.getElementById(`subtask-text-${parentId}`);
-        const prioritySelect = document.getElementById(`subtask-priority-${parentId}`);
         
         const originalText = textInput.value.trim();
-        const selectPriority = prioritySelect.value;
         
         if (originalText) {
             // Parse Priorität aus dem Text
             const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
             
-            // Verwende geparste Priorität, falls vorhanden, sonst Select-Wert
-            const finalPriority = parsedPriority || selectPriority;
+            // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
+            const finalPriority = parsedPriority || 'medium';
             
             this.addSubtask(projectId, parentId, text, finalPriority);
             this.cancelAddSubtask(parentId);
