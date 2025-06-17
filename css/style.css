@@ -781,6 +781,12 @@ body.dark-theme #todo-container {
     gap: 8px;
     align-self: center;
     align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.todo-item:hover .todo-actions {
+    opacity: 1;
 }
 
 .btn-small {
@@ -1202,6 +1208,11 @@ body.dark-theme .btn-cancel:hover {
     margin-top: 0;
     transition: all 0.3s ease;
     border-radius: 4px;
+    opacity: 0;
+}
+
+.todo-item:hover .subtask-toggle {
+    opacity: 1;
 }
 
 .subtask-toggle:hover {
