@@ -147,3 +147,6 @@ git push -u origin main
 - **📱 Responsive**: Optimiert für Desktop, Tablet und Mobile
 - **💾 Persistierung**: Automatisches Speichern in LocalStorage
 - **⌨️ Keyboard Support**: ESC zum Abbrechen, Enter zum Bestätigen
+
+## Git Workflow Notizen
+- only commit to git, never push to github
