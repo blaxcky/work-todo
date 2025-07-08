@@ -10,7 +10,7 @@ class TodoApp {
         this.searchTerm = '';
         this.isDarkTheme = localStorage.getItem('darkTheme') === 'true';
         this.isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        this.isCompletedSectionCollapsed = localStorage.getItem('completedSectionCollapsed') !== 'false';
+        this.isCompletedSectionCollapsed = localStorage.getItem('completedSectionCollapsed') === 'true';
         this.currentProjectId = this.projects[0].id;
         this.init();
     }
@@ -132,13 +132,18 @@ class TodoApp {
     }
 
     toggleTodo(projectId, todoId) {
+        console.log('toggleTodo called with projectId:', projectId, 'todoId:', todoId);
         const project = this.projects.find(p => p.id === projectId);
+        console.log('Found project:', project ? project.name : 'not found');
         if (project) {
             const todo = this.findTodoById(project, todoId);
+            console.log('Found todo:', todo ? todo.text : 'not found');
             if (todo) {
                 // Animation nur bei Completion (nicht beim Un-Check)
                 const wasCompleted = todo.completed;
+                console.log('Todo was completed:', wasCompleted);
                 todo.completed = !todo.completed;
+                console.log('Todo is now completed:', todo.completed);
                 
                 // If todo has subtasks, toggle them too
                 if (todo.subtasks && todo.subtasks.length > 0) {
@@ -342,6 +347,8 @@ class TodoApp {
         // Update completed section visibility after rendering
         setTimeout(() => {
             this.updateCompletedSectionVisibility();
+            this.bindCompletedSectionEvents();
+            this.bindCheckboxEvents();
         }, 50);
     }
 
@@ -834,7 +841,7 @@ class TodoApp {
             if (completedTodos.length > 0) {
                 html += `
                     <div class="completed-section">
-                        <div class="completed-header" onclick="app.toggleCompletedSection()">
+                        <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
                                 <polyline points="9,18 15,12 9,6"></polyline>
                             </svg>
@@ -1875,14 +1882,21 @@ class TodoApp {
     }
 
     toggleCompletedSection() {
+        console.log('toggleCompletedSection called, current state:', this.isCompletedSectionCollapsed);
         this.isCompletedSectionCollapsed = !this.isCompletedSectionCollapsed;
         localStorage.setItem('completedSectionCollapsed', this.isCompletedSectionCollapsed);
+        console.log('New state:', this.isCompletedSectionCollapsed);
         this.updateCompletedSectionVisibility();
     }
 
     updateCompletedSectionVisibility() {
         const completedSections = document.querySelectorAll('.completed-todos');
         const toggleIcons = document.querySelectorAll('.completed-toggle-icon');
+        
+        console.log('updateCompletedSectionVisibility called');
+        console.log('Found completed sections:', completedSections.length);
+        console.log('Found toggle icons:', toggleIcons.length);
+        console.log('isCompletedSectionCollapsed:', this.isCompletedSectionCollapsed);
         
         completedSections.forEach(section => {
             if (this.isCompletedSectionCollapsed) {
@@ -1898,6 +1912,34 @@ class TodoApp {
             } else {
                 icon.style.transform = 'rotate(90deg)';
             }
+        });
+    }
+    
+    bindCompletedSectionEvents() {
+        const completedHeaders = document.querySelectorAll('.completed-header');
+        console.log('Binding events to completed headers:', completedHeaders.length);
+        
+        completedHeaders.forEach(header => {
+            // Remove existing event listeners
+            header.removeEventListener('click', this.toggleCompletedSection.bind(this));
+            // Add new event listener
+            header.addEventListener('click', this.toggleCompletedSection.bind(this));
+        });
+    }
+    
+    bindCheckboxEvents() {
+        const checkboxes = document.querySelectorAll('.todo-checkbox');
+        console.log('Binding events to checkboxes:', checkboxes.length);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const todoItem = checkbox.closest('.todo-item');
+                const todoId = todoItem.dataset.todoId;
+                const projectId = todoItem.dataset.projectId;
+                console.log('Checkbox changed for todo:', todoId, 'in project:', projectId);
+                this.toggleTodo(projectId, todoId);
+            });
         });
     }
 
