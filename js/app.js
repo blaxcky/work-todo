@@ -4,7 +4,8 @@ class TodoApp {
             {
                 id: 'default',
                 name: 'Meine Todos',
-                todos: []
+                todos: [],
+                sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
             }
         ];
         this.searchTerm = '';
@@ -30,6 +31,19 @@ class TodoApp {
         
         const projects = JSON.parse(data);
         
+        // Migrate existing projects to support sections
+        projects.forEach(project => {
+            if (!project.sections) {
+                project.sections = [{ id: 'general', name: 'Allgemein', collapsed: false }];
+            }
+            
+            // Migrate existing todos to have a section
+            project.todos.forEach(todo => {
+                if (!todo.section) {
+                    todo.section = 'general';
+                }
+            });
+        });
         
         return projects;
     }
@@ -43,7 +57,8 @@ class TodoApp {
         const project = {
             id: Date.now().toString(),
             name: name,
-            todos: []
+            todos: [],
+            sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
         };
         this.projects.push(project);
         this.saveToStorage();
@@ -55,7 +70,7 @@ class TodoApp {
         return project.todos.find(todo => todo.id === todoId) || null;
     }
 
-    addTodo(projectId, text, priority = 'medium', dueDate = null) {
+    addTodo(projectId, text, priority = 'medium', dueDate = null, section = 'general') {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = {
@@ -64,6 +79,7 @@ class TodoApp {
                 completed: false,
                 priority: priority,
                 dueDate: dueDate,
+                section: section,
                 createdAt: new Date()
             };
             
@@ -277,6 +293,7 @@ class TodoApp {
             this.updateCompletedSectionVisibility();
             this.bindCompletedSectionEvents();
             this.bindCheckboxEvents();
+            this.bindSectionKeyboardEvents();
         }, 50);
     }
 
@@ -309,17 +326,24 @@ class TodoApp {
 
         const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
 
+        const sectionOptions = currentProject.sections.map(section => 
+            `<option value="${section.id}">${section.name}</option>`
+        ).join('');
+
         container.innerHTML = `
             <div class="project-section">
                 <div class="add-todo-form">
                     <div class="input-row">
                         <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="todo-input" autocomplete="off" autocorrect="off" spellcheck="false">
                         <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)" autocomplete="off">
+                        <select id="todo-section-${currentProject.id}" class="todo-section-select" title="Bereich auswählen">
+                            ${sectionOptions}
+                        </select>
                         <button onclick="app.submitTodo('${currentProject.id}')" class="add-btn">+</button>
                     </div>
                 </div>
                 <div class="todos-list">
-                    ${sortedTodos.length > 0 ? this.renderTodoHierarchy(sortedTodos, currentProject.id) : '<div class="no-todos">Noch keine Todos in diesem Projekt</div>'}
+                    ${this.renderTodoHierarchy(sortedTodos, currentProject.id)}
                 </div>
             </div>
         `;
@@ -632,39 +656,110 @@ class TodoApp {
     }
 
     renderTodoHierarchy(todos, projectId, level = 0) {
-        const activeTodos = todos.filter(todo => !todo.completed);
-        const completedTodos = todos.filter(todo => todo.completed);
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return '';
         
         let html = '';
         
-        // Render active todos
-        html += activeTodos.map(todo => {
-            return this.renderSingleTodo(todo, projectId, level);
-        }).join('');
+        // Group todos by section
+        const todosBySection = {};
+        todos.forEach(todo => {
+            const sectionId = todo.section || 'general';
+            if (!todosBySection[sectionId]) {
+                todosBySection[sectionId] = [];
+            }
+            todosBySection[sectionId].push(todo);
+        });
         
-        // Add separator and completed section if there are completed todos
-        if (completedTodos.length > 0) {
+        // Render sections
+        project.sections.forEach(section => {
+            const sectionTodos = todosBySection[section.id] || [];
+            const activeTodos = sectionTodos.filter(todo => !todo.completed);
+            const completedTodos = sectionTodos.filter(todo => todo.completed);
+            
+            // Always show sections, even if empty
             html += `
-                <div class="completed-section">
-                    <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
+                <div class="section-container">
+                    <div class="section-header" onclick="app.toggleSection('${projectId}', '${section.id}')" style="cursor: pointer;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-toggle-icon ${section.collapsed ? 'collapsed' : ''}">
                             <polyline points="9,18 15,12 9,6"></polyline>
                         </svg>
-                        <span>Erledigt (${completedTodos.length})</span>
+                        <span class="section-name">${section.name}</span>
+                        <span class="section-count">(${sectionTodos.length})</span>
+                        <div class="section-actions">
+                            <button class="btn-small btn-edit-section" onclick="event.stopPropagation(); app.showEditSectionForm('${projectId}', '${section.id}')" title="Bereich bearbeiten">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-small btn-delete-section" onclick="event.stopPropagation(); app.showDeleteSectionModal('${projectId}', '${section.id}')" title="Bereich löschen">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="completed-todos" id="completed-todos-${projectId}">
+                    <div class="section-content" id="section-content-${projectId}-${section.id}" style="display: ${section.collapsed ? 'none' : 'block'}">
             `;
             
-            // Render completed todos
-            html += completedTodos.map(todo => {
-                return this.renderSingleTodo(todo, projectId, level);
-            }).join('');
+            // Render active todos in section
+            if (activeTodos.length > 0) {
+                html += activeTodos.map(todo => {
+                    return this.renderSingleTodo(todo, projectId, level);
+                }).join('');
+            } else if (sectionTodos.length === 0) {
+                html += '<div class="no-todos">Noch keine Todos in diesem Bereich</div>';
+            }
+            
+            // Add completed section if there are completed todos
+            if (completedTodos.length > 0) {
+                html += `
+                    <div class="completed-section">
+                        <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
+                                <polyline points="9,18 15,12 9,6"></polyline>
+                            </svg>
+                            <span>Erledigt (${completedTodos.length})</span>
+                        </div>
+                        <div class="completed-todos" id="completed-todos-${projectId}-${section.id}">
+                `;
+                
+                // Render completed todos
+                html += completedTodos.map(todo => {
+                    return this.renderSingleTodo(todo, projectId, level);
+                }).join('');
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
             
             html += `
                     </div>
                 </div>
             `;
-        }
+        });
+        
+        // Add button to create new section
+        html += `
+            <div class="add-section-container">
+                <button class="btn-add-section" onclick="app.showAddSectionForm('${projectId}')" title="Neuen Bereich hinzufügen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Neuen Bereich hinzufügen
+                </button>
+                <div id="add-section-form-${projectId}" class="add-section-form" style="display: none;">
+                    <input type="text" id="section-name-input-${projectId}" placeholder="Bereichsname eingeben..." class="section-input">
+                    <div class="form-actions">
+                        <button onclick="app.submitSection('${projectId}')" class="btn-confirm" title="Erstellen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
+                        </button>
+                        <button onclick="app.hideAddSectionForm('${projectId}')" class="btn-cancel" title="Abbrechen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
         
         return html;
     }
@@ -747,9 +842,11 @@ class TodoApp {
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
         const dateInput = document.getElementById(`todo-date-${projectId}`);
+        const sectionSelect = document.getElementById(`todo-section-${projectId}`);
         
         const originalText = textInput.value.trim();
         const dueDate = dateInput.value ? new Date(dateInput.value) : null;
+        const selectedSection = sectionSelect ? sectionSelect.value : 'general';
         
         if (originalText) {
             // Parse Priorität aus dem Text
@@ -758,17 +855,21 @@ class TodoApp {
             // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
             const finalPriority = parsedPriority || 'medium';
             
-            this.addTodo(projectId, text, finalPriority, dueDate);
+            this.addTodo(projectId, text, finalPriority, dueDate, selectedSection);
             // Nach dem Re-Rendering die neuen Elemente finden und Fokus setzen
             setTimeout(() => {
                 const newTextInput = document.getElementById(`todo-text-${projectId}`);
                 const newDateInput = document.getElementById(`todo-date-${projectId}`);
+                const newSectionSelect = document.getElementById(`todo-section-${projectId}`);
                 if (newTextInput) {
                     newTextInput.value = '';
                     newTextInput.focus();
                 }
                 if (newDateInput) {
                     newDateInput.value = '';
+                }
+                if (newSectionSelect) {
+                    newSectionSelect.value = 'general';
                 }
             }, 0);
         }
@@ -1649,6 +1750,170 @@ class TodoApp {
                 this.toggleTodo(projectId, todoId);
             });
         });
+    }
+
+    bindSectionKeyboardEvents() {
+        // Bind Enter key to section input forms
+        document.querySelectorAll('.section-input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const projectId = input.id.replace('section-name-input-', '');
+                    this.submitSection(projectId);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    const projectId = input.id.replace('section-name-input-', '');
+                    this.hideAddSectionForm(projectId);
+                }
+            });
+        });
+    }
+
+    // Section Management Functions
+    toggleSection(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project) {
+            const section = project.sections.find(s => s.id === sectionId);
+            if (section) {
+                section.collapsed = !section.collapsed;
+                this.saveToStorage();
+                
+                // Update UI
+                const sectionContent = document.getElementById(`section-content-${projectId}-${sectionId}`);
+                const toggleIcon = sectionContent.parentElement.querySelector('.section-toggle-icon');
+                
+                if (section.collapsed) {
+                    sectionContent.style.display = 'none';
+                    toggleIcon.classList.add('collapsed');
+                } else {
+                    sectionContent.style.display = 'block';
+                    toggleIcon.classList.remove('collapsed');
+                }
+            }
+        }
+    }
+
+    showAddSectionForm(projectId) {
+        const form = document.getElementById(`add-section-form-${projectId}`);
+        const input = document.getElementById(`section-name-input-${projectId}`);
+        
+        if (form) {
+            form.style.display = 'block';
+            input.focus();
+        }
+    }
+
+    hideAddSectionForm(projectId) {
+        const form = document.getElementById(`add-section-form-${projectId}`);
+        const input = document.getElementById(`section-name-input-${projectId}`);
+        
+        if (form) {
+            form.style.display = 'none';
+            input.value = '';
+        }
+    }
+
+    submitSection(projectId) {
+        const input = document.getElementById(`section-name-input-${projectId}`);
+        const name = input.value.trim();
+        
+        if (name) {
+            this.addSection(projectId, name);
+            this.hideAddSectionForm(projectId);
+        }
+    }
+
+    addSection(projectId, name) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project) {
+            const section = {
+                id: Date.now().toString(),
+                name: name,
+                collapsed: false
+            };
+            project.sections.push(section);
+            this.saveToStorage();
+            this.render();
+        }
+    }
+
+    showEditSectionForm(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        const section = project?.sections.find(s => s.id === sectionId);
+        
+        if (section) {
+            const sectionNameSpan = document.querySelector(`#section-content-${projectId}-${sectionId}`).parentElement.querySelector('.section-name');
+            const currentName = section.name;
+            
+            sectionNameSpan.innerHTML = `<input type="text" id="edit-section-input-${sectionId}" value="${currentName}" class="section-edit-input" style="background: transparent; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; font-size: inherit;">`;
+            
+            const input = document.getElementById(`edit-section-input-${sectionId}`);
+            input.focus();
+            input.select();
+            
+            const handleSave = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    section.name = newName;
+                    this.saveToStorage();
+                }
+                sectionNameSpan.textContent = newName || currentName;
+                input.removeEventListener('blur', handleSave);
+                input.removeEventListener('keypress', handleKeyPress);
+            };
+            
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    handleSave();
+                } else if (e.key === 'Escape') {
+                    sectionNameSpan.textContent = currentName;
+                    input.removeEventListener('blur', handleSave);
+                    input.removeEventListener('keypress', handleKeyPress);
+                }
+            };
+            
+            input.addEventListener('blur', handleSave);
+            input.addEventListener('keypress', handleKeyPress);
+        }
+    }
+
+    showDeleteSectionModal(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        const section = project?.sections.find(s => s.id === sectionId);
+        
+        if (section && section.id !== 'general') {
+            const todosInSection = project.todos.filter(todo => todo.section === sectionId);
+            
+            if (todosInSection.length > 0) {
+                const confirmMove = confirm(`Der Bereich "${section.name}" enthält ${todosInSection.length} Todo(s). Diese werden in den Bereich "Allgemein" verschoben. Fortfahren?`);
+                if (confirmMove) {
+                    this.deleteSection(projectId, sectionId);
+                }
+            } else {
+                const confirmDelete = confirm(`Soll der Bereich "${section.name}" wirklich gelöscht werden?`);
+                if (confirmDelete) {
+                    this.deleteSection(projectId, sectionId);
+                }
+            }
+        }
+    }
+
+    deleteSection(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project && sectionId !== 'general') {
+            // Move todos to general section
+            project.todos.forEach(todo => {
+                if (todo.section === sectionId) {
+                    todo.section = 'general';
+                }
+            });
+            
+            // Remove section
+            project.sections = project.sections.filter(s => s.id !== sectionId);
+            
+            this.saveToStorage();
+            this.render();
+        }
     }
 
 }

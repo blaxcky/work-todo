@@ -2402,3 +2402,236 @@ body.dark-theme .completed-todos {
     transition: all 0.2s ease;
     border: 2px solid transparent;
 }
+
+/* Section Styles */
+.section-container {
+    margin-bottom: 20px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+.section-header:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-toggle-icon {
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.section-toggle-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.section-name {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.section-count {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+.section-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.section-header:hover .section-actions {
+    opacity: 1;
+}
+
+.btn-edit-section,
+.btn-delete-section {
+    padding: 4px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit-section:hover {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.btn-delete-section:hover {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.section-content {
+    margin-left: 16px;
+    border-left: 2px solid #e9ecef;
+    padding-left: 16px;
+    transition: all 0.3s ease;
+}
+
+.add-section-container {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    text-align: center;
+}
+
+.btn-add-section {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid #3498db;
+    border-radius: 6px;
+    color: #3498db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.btn-add-section:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.add-section-form {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.section-input {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.section-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.todo-section-select {
+    padding: 6px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.todo-section-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+/* Dark theme section styles */
+.dark-theme .section-header {
+    background: #2c3e50;
+    color: #ecf0f1;
+    border-left-color: #3498db;
+}
+
+.dark-theme .section-header:hover {
+    background: #34495e;
+}
+
+.dark-theme .section-count {
+    color: #95a5a6;
+}
+
+.dark-theme .section-content {
+    border-left-color: #4a5568;
+}
+
+.dark-theme .add-section-container {
+    background: #2c3e50;
+    border-color: #4a5568;
+}
+
+.dark-theme .btn-add-section {
+    color: #3498db;
+    border-color: #3498db;
+}
+
+.dark-theme .btn-add-section:hover {
+    background: #3498db;
+    color: white;
+}
+
+.dark-theme .section-input {
+    background: #34495e;
+    border-color: #4a5568;
+    color: #ecf0f1;
+}
+
+.dark-theme .section-input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.dark-theme .todo-section-select {
+    background: #34495e;
+    border-color: #4a5568;
+    color: #ecf0f1;
+}
+
+.dark-theme .todo-section-select:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.dark-theme .btn-edit-section,
+.dark-theme .btn-delete-section {
+    color: #95a5a6;
+}
+
+.dark-theme .btn-edit-section:hover {
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+}
+
+.dark-theme .btn-delete-section:hover {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
