@@ -361,12 +361,9 @@ class TodoApp {
 
     renderTodoHierarchyForAllProjects(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const marginLeft = level * 20;
-            
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                     data-todo-id="${todo.id}" data-project-id="${todo.projectId}" 
-                     style="padding-left: ${marginLeft + 12}px">
+                     data-todo-id="${todo.id}" data-project-id="${todo.projectId}">
                     <div class="todo-main-content">
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
@@ -438,12 +435,9 @@ class TodoApp {
 
     renderTodoHierarchyForArchive(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const marginLeft = level * 20;
-            
             let html = `
                 <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                     data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                     style="padding-left: ${marginLeft + 12}px">
+                     data-todo-id="${todo.id}" data-project-id="${projectId}">
                     <div class="todo-main-content">
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
@@ -603,58 +597,47 @@ class TodoApp {
     }
 
     renderTodoHierarchy(todos, projectId, level = 0) {
-        // Nur auf der Top-Level (level = 0) Main-Tasks separieren
-        if (level === 0) {
-            const activeTodos = todos.filter(todo => !todo.completed);
-            const completedTodos = todos.filter(todo => todo.completed);
-            
-            let html = '';
-            
-            // Render active main todos with all their subtasks (completed and active)
-            html += activeTodos.map(todo => {
-                return this.renderSingleTodo(todo, projectId, level);
-            }).join('');
-            
-            // Add separator and completed section if there are completed main todos
-            if (completedTodos.length > 0) {
-                html += `
-                    <div class="completed-section">
-                        <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
-                                <polyline points="9,18 15,12 9,6"></polyline>
-                            </svg>
-                            <span>Erledigt (${completedTodos.length})</span>
-                        </div>
-                        <div class="completed-todos" id="completed-todos-${projectId}">
-                `;
-                
-                // Render completed main todos with all their subtasks (completed and active)
-                html += completedTodos.map(todo => {
-                    return this.renderSingleTodo(todo, projectId, level);
-                }).join('');
-                
-                html += `
-                        </div>
+        const activeTodos = todos.filter(todo => !todo.completed);
+        const completedTodos = todos.filter(todo => todo.completed);
+        
+        let html = '';
+        
+        // Render active todos
+        html += activeTodos.map(todo => {
+            return this.renderSingleTodo(todo, projectId, level);
+        }).join('');
+        
+        // Add separator and completed section if there are completed todos
+        if (completedTodos.length > 0) {
+            html += `
+                <div class="completed-section">
+                    <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
+                            <polyline points="9,18 15,12 9,6"></polyline>
+                        </svg>
+                        <span>Erledigt (${completedTodos.length})</span>
                     </div>
-                `;
-            }
+                    <div class="completed-todos" id="completed-todos-${projectId}">
+            `;
             
-            return html;
-        } else {
-            // Für Subtasks (level > 0): Render alle Subtasks zusammen, ohne Trennung
-            return todos.map(todo => {
+            // Render completed todos
+            html += completedTodos.map(todo => {
                 return this.renderSingleTodo(todo, projectId, level);
             }).join('');
+            
+            html += `
+                    </div>
+                </div>
+            `;
         }
+        
+        return html;
     }
 
-    renderSingleTodo(todo, projectId, level) {
-        const marginLeft = level * 20;
-        
+    renderSingleTodo(todo, projectId, level = 0) {
         let html = `
             <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
-                 data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                 style="padding-left: ${marginLeft + 12}px">
+                 data-todo-id="${todo.id}" data-project-id="${projectId}">
                 <div class="todo-main-content">
                     <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                            ${todo.completed ? 'checked' : ''} 
@@ -1617,4 +1600,5 @@ class TodoApp {
 
 }
 
-const app = new TodoApp();
+// Make app globally available for onclick handlers
+window.app = new TodoApp();
