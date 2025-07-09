@@ -97,13 +97,11 @@ class TodoApp {
         if (project) {
             const todo = this.findTodoById(project, todoId);
             if (todo) {
-                // Animation nur bei Completion (nicht beim Un-Check)
                 const wasCompleted = todo.completed;
                 todo.completed = !todo.completed;
                 
-                
                 if (!wasCompleted) {
-                    // Todo wurde gerade erledigt - Animation für das Verschieben nach unten
+                    // Todo wurde gerade erledigt - Auto-Archive with animation
                     const todoElement = document.querySelector(`[data-todo-id="${todoId}"]`);
                     if (todoElement) {
                         todoElement.style.transition = 'all 0.3s ease';
@@ -111,9 +109,18 @@ class TodoApp {
                         todoElement.style.opacity = '0.8';
                         
                         setTimeout(() => {
-                            this.saveToStorage();
-                            this.render();
+                            this.autoArchiveTodo(projectId, todoId);
                         }, 300);
+                        return;
+                    } else {
+                        // No animation element found, archive immediately
+                        this.autoArchiveTodo(projectId, todoId);
+                        return;
+                    }
+                } else {
+                    // Todo wurde un-completed - restore from archive if it's in archive
+                    if (projectId === 'archive') {
+                        this.restoreTodoFromArchive(todoId);
                         return;
                     }
                 }
@@ -124,6 +131,85 @@ class TodoApp {
         }
     }
 
+    autoArchiveTodo(projectId, todoId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const todoIndex = project.todos.findIndex(t => t.id === todoId);
+        if (todoIndex === -1) return;
+        
+        const todo = project.todos[todoIndex];
+        
+        // Store original location info
+        todo.originalProjectId = projectId;
+        todo.originalProjectName = project.name;
+        todo.originalSection = todo.section;
+        todo.archivedAt = new Date();
+        
+        // Find or create archive project
+        let archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject) {
+            archiveProject = {
+                id: 'archive',
+                name: 'Archiv',
+                todos: [],
+                sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
+            };
+            this.projects.push(archiveProject);
+        }
+        
+        // Move todo to archive (at the beginning so newest are on top)
+        project.todos.splice(todoIndex, 1);
+        archiveProject.todos.unshift(todo);
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+    }
+
+    restoreTodoFromArchive(todoId) {
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject) return;
+        
+        const todoIndex = archiveProject.todos.findIndex(t => t.id === todoId);
+        if (todoIndex === -1) return;
+        
+        const todo = archiveProject.todos[todoIndex];
+        
+        // Find original project or use default
+        let originalProject = this.projects.find(p => p.id === todo.originalProjectId);
+        if (!originalProject) {
+            // If original project doesn't exist, use default project
+            originalProject = this.projects.find(p => p.id === 'default') || this.projects[0];
+        }
+        
+        // Restore original section if it exists
+        if (originalProject.sections && todo.originalSection) {
+            const sectionExists = originalProject.sections.find(s => s.id === todo.originalSection);
+            if (!sectionExists) {
+                // If original section doesn't exist, use general section
+                todo.section = 'general';
+            } else {
+                todo.section = todo.originalSection;
+            }
+        } else {
+            todo.section = 'general';
+        }
+        
+        // Clean up archive metadata
+        delete todo.originalProjectId;
+        delete todo.originalProjectName;
+        delete todo.originalSection;
+        delete todo.archivedAt;
+        
+        // Move todo back to original project
+        archiveProject.todos.splice(todoIndex, 1);
+        originalProject.todos.push(todo);
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+    }
 
     showDeleteTodoModal(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
@@ -288,26 +374,17 @@ class TodoApp {
         this.updatePageTitle();
         this.updateFloatingArchiveButton();
         
-        // Update completed section visibility after rendering
+        // Update DOM after rendering
         setTimeout(() => {
-            this.updateCompletedSectionVisibility();
-            this.bindCompletedSectionEvents();
             this.bindCheckboxEvents();
             this.bindSectionKeyboardEvents();
         }, 50);
     }
 
     updateFloatingArchiveButton() {
+        // Hide floating archive button since todos now auto-archive
         const floatingBtn = document.getElementById('floating-archive-btn');
-        const badge = document.getElementById('floating-archive-badge');
-        const completedMainTodosCount = this.countCompletedMainTodos();
-        
-        // Zeige den Button nur wenn es erledigte Main-Todos gibt und nicht im Archiv
-        if (completedMainTodosCount > 0 && this.currentProjectId !== 'archive') {
-            floatingBtn.style.display = 'flex';
-            badge.textContent = completedMainTodosCount;
-            floatingBtn.title = `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} archivieren`;
-        } else {
+        if (floatingBtn) {
             floatingBtn.style.display = 'none';
         }
     }
@@ -504,7 +581,7 @@ class TodoApp {
                         <div class="todo-content">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                            ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
+                            ${todo.originalProjectName ? `<span class="original-project">aus: ${todo.originalProjectName}</span>` : ''}
                         </div>
                         <div class="todo-actions">
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
@@ -698,37 +775,13 @@ class TodoApp {
                     <div class="section-content" id="section-content-${projectId}-${section.id}" style="display: ${section.collapsed ? 'none' : 'block'}">
             `;
             
-            // Render active todos in section
+            // Render active todos in section (completed todos automatically go to archive)
             if (activeTodos.length > 0) {
                 html += activeTodos.map(todo => {
                     return this.renderSingleTodo(todo, projectId, level);
                 }).join('');
             } else if (sectionTodos.length === 0) {
                 html += '<div class="no-todos">Noch keine Todos in diesem Bereich</div>';
-            }
-            
-            // Add completed section if there are completed todos
-            if (completedTodos.length > 0) {
-                html += `
-                    <div class="completed-section">
-                        <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
-                                <polyline points="9,18 15,12 9,6"></polyline>
-                            </svg>
-                            <span>Erledigt (${completedTodos.length})</span>
-                        </div>
-                        <div class="completed-todos" id="completed-todos-${projectId}-${section.id}">
-                `;
-                
-                // Render completed todos
-                html += completedTodos.map(todo => {
-                    return this.renderSingleTodo(todo, projectId, level);
-                }).join('');
-                
-                html += `
-                        </div>
-                    </div>
-                `;
             }
             
             html += `
@@ -1057,14 +1110,6 @@ class TodoApp {
             }
         });
 
-        document.getElementById('archive-btn').addEventListener('click', () => {
-            this.closeDropdownMenu();
-            this.showArchiveModal();
-        });
-
-        document.getElementById('floating-archive-btn').addEventListener('click', () => {
-            this.showArchiveModal();
-        });
 
         document.getElementById('export-btn').addEventListener('click', () => {
             this.closeDropdownMenu();
@@ -1152,13 +1197,6 @@ class TodoApp {
             this.confirmImport();
         });
 
-        document.getElementById('archive-cancel').addEventListener('click', () => {
-            this.hideArchiveModal();
-        });
-
-        document.getElementById('archive-confirm').addEventListener('click', () => {
-            this.confirmArchive();
-        });
 
         document.getElementById('clear-archive-cancel').addEventListener('click', () => {
             this.hideClearArchiveModal();
@@ -1279,21 +1317,6 @@ class TodoApp {
         this.hideDeleteTodoModal();
     }
 
-    showArchiveModal() {
-        const completedMainTodosCount = this.countCompletedMainTodos();
-        if (completedMainTodosCount === 0) {
-            this.showToast('Keine erledigten Main-Todos zum Archivieren gefunden.', 'info');
-            return;
-        }
-        
-        document.getElementById('archive-count-text').textContent = 
-            `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} werden in das Projekt "Archiv" verschoben.`;
-        document.getElementById('archive-modal').style.display = 'flex';
-    }
-
-    hideArchiveModal() {
-        document.getElementById('archive-modal').style.display = 'none';
-    }
 
     resetImportModal() {
         document.getElementById('file-input').value = '';
@@ -1605,37 +1628,6 @@ class TodoApp {
         return count;
     }
 
-    confirmArchive() {
-        const archiveProject = this.getOrCreateArchiveProject();
-        let movedCount = 0;
-
-        // Gehe durch alle Projekte und verschiebe erledigte Todos (außer Archiv)
-        this.projects.forEach(project => {
-            if (project.id === archiveProject.id || project.id === 'archive') return; // Skip das Archiv-Projekt selbst
-            
-            const completedTodos = project.todos.filter(todo => todo.completed);
-            const remainingTodos = project.todos.filter(todo => !todo.completed);
-            
-            // Füge erledigte Todos zum Archiv hinzu (am Anfang, damit neue oben stehen)
-            completedTodos.forEach(todo => {
-                // Füge Projektinformation zum Todo hinzu
-                todo.originalProject = project.name;
-                todo.archivedAt = new Date();
-                archiveProject.todos.unshift(todo); // unshift() fügt am Anfang hinzu
-                movedCount++;
-            });
-            
-            // Behalte nur die nicht erledigten Todos im ursprünglichen Projekt
-            project.todos = remainingTodos;
-        });
-
-        this.saveToStorage();
-        this.renderSidebar();
-        this.render();
-        this.hideArchiveModal();
-        
-        this.showToast(`${movedCount} erledigte Todo${movedCount === 1 ? '' : 's'} wurden ins Archiv verschoben.`);
-    }
 
     getOrCreateArchiveProject() {
         // Suche nach existierendem Archiv-Projekt
@@ -1688,51 +1680,6 @@ class TodoApp {
         this.showToast(`${todoCount} Todo${todoCount === 1 ? '' : 's'} aus dem Archiv gelöscht.`);
     }
 
-    toggleCompletedSection() {
-        console.log('toggleCompletedSection called, current state:', this.isCompletedSectionCollapsed);
-        this.isCompletedSectionCollapsed = !this.isCompletedSectionCollapsed;
-        localStorage.setItem('completedSectionCollapsed', this.isCompletedSectionCollapsed);
-        console.log('New state:', this.isCompletedSectionCollapsed);
-        this.updateCompletedSectionVisibility();
-    }
-
-    updateCompletedSectionVisibility() {
-        const completedSections = document.querySelectorAll('.completed-todos');
-        const toggleIcons = document.querySelectorAll('.completed-toggle-icon');
-        
-        console.log('updateCompletedSectionVisibility called');
-        console.log('Found completed sections:', completedSections.length);
-        console.log('Found toggle icons:', toggleIcons.length);
-        console.log('isCompletedSectionCollapsed:', this.isCompletedSectionCollapsed);
-        
-        completedSections.forEach(section => {
-            if (this.isCompletedSectionCollapsed) {
-                section.style.display = 'none';
-            } else {
-                section.style.display = 'block';
-            }
-        });
-        
-        toggleIcons.forEach(icon => {
-            if (this.isCompletedSectionCollapsed) {
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                icon.style.transform = 'rotate(90deg)';
-            }
-        });
-    }
-    
-    bindCompletedSectionEvents() {
-        const completedHeaders = document.querySelectorAll('.completed-header');
-        console.log('Binding events to completed headers:', completedHeaders.length);
-        
-        completedHeaders.forEach(header => {
-            // Remove existing event listeners
-            header.removeEventListener('click', this.toggleCompletedSection.bind(this));
-            // Add new event listener
-            header.addEventListener('click', this.toggleCompletedSection.bind(this));
-        });
-    }
     
     bindCheckboxEvents() {
         const checkboxes = document.querySelectorAll('.todo-checkbox');

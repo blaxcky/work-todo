@@ -2635,3 +2635,19 @@ body.dark-theme .completed-todos {
     background: rgba(231, 76, 60, 0.2);
     color: #e74c3c;
 }
+
+/* Archive original project indicator */
+.original-project {
+    font-size: 0.75rem;
+    color: #6c757d;
+    background: rgba(108, 117, 125, 0.1);
+    padding: 2px 6px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+.dark-theme .original-project {
+    color: #95a5a6;
+    background: rgba(149, 165, 166, 0.2);
+}
