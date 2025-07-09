@@ -30,31 +30,10 @@ class TodoApp {
         
         const projects = JSON.parse(data);
         
-        // Migration: Ensure all todos have subtask fields
-        projects.forEach(project => {
-            project.todos.forEach(todo => {
-                if (!todo.subtasks) todo.subtasks = [];
-                if (todo.collapsed === undefined) todo.collapsed = false;
-                if (!todo.parentId) todo.parentId = null;
-                
-                // Recursively migrate subtasks
-                this.migrateTodoData(todo);
-            });
-        });
         
         return projects;
     }
 
-    migrateTodoData(todo) {
-        if (todo.subtasks) {
-            todo.subtasks.forEach(subtask => {
-                if (!subtask.subtasks) subtask.subtasks = [];
-                if (subtask.collapsed === undefined) subtask.collapsed = false;
-                if (!subtask.parentId) subtask.parentId = todo.id;
-                this.migrateTodoData(subtask);
-            });
-        }
-    }
 
     saveToStorage() {
         localStorage.setItem('todoApp', JSON.stringify(this.projects));
@@ -73,33 +52,10 @@ class TodoApp {
     }
 
     findTodoById(project, todoId) {
-        // Search in main todos
-        for (let todo of project.todos) {
-            if (todo.id === todoId) {
-                return todo;
-            }
-            // Search in subtasks recursively
-            const found = this.findTodoInSubtasks(todo, todoId);
-            if (found) return found;
-        }
-        return null;
+        return project.todos.find(todo => todo.id === todoId) || null;
     }
 
-    findTodoInSubtasks(todo, todoId) {
-        if (!todo.subtasks) return null;
-        
-        for (let subtask of todo.subtasks) {
-            if (subtask.id === todoId) {
-                return subtask;
-            }
-            // Recursive search in nested subtasks
-            const found = this.findTodoInSubtasks(subtask, todoId);
-            if (found) return found;
-        }
-        return null;
-    }
-
-    addTodo(projectId, text, priority = 'medium', dueDate = null, parentId = null) {
+    addTodo(projectId, text, priority = 'medium', dueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = {
@@ -108,21 +64,10 @@ class TodoApp {
                 completed: false,
                 priority: priority,
                 dueDate: dueDate,
-                createdAt: new Date(),
-                parentId: parentId,
-                subtasks: [],
-                collapsed: false
+                createdAt: new Date()
             };
             
-            if (parentId) {
-                // Find parent todo and add this as subtask
-                const parentTodo = this.findTodoById(project, parentId);
-                if (parentTodo) {
-                    parentTodo.subtasks.push(todo);
-                }
-            } else {
-                project.todos.push(todo);
-            }
+            project.todos.push(todo);
             
             this.saveToStorage();
             this.render();
@@ -145,10 +90,6 @@ class TodoApp {
                 todo.completed = !todo.completed;
                 console.log('Todo is now completed:', todo.completed);
                 
-                // If todo has subtasks, toggle them too
-                if (todo.subtasks && todo.subtasks.length > 0) {
-                    this.toggleSubtasks(todo.subtasks, todo.completed);
-                }
                 
                 if (!wasCompleted) {
                     // Todo wurde gerade erledigt - Animation für das Verschieben nach unten
@@ -172,63 +113,20 @@ class TodoApp {
         }
     }
 
-    toggleSubtasks(subtasks, completed) {
-        subtasks.forEach(subtask => {
-            subtask.completed = completed;
-            if (subtask.subtasks && subtask.subtasks.length > 0) {
-                this.toggleSubtasks(subtask.subtasks, completed);
-            }
-        });
-    }
 
     deleteTodo(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
-            // Try to delete from main todos
             const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
             if (mainTodoIndex !== -1) {
                 project.todos.splice(mainTodoIndex, 1);
-            } else {
-                // Search and delete from subtasks
-                this.deleteFromSubtasks(project.todos, todoId);
-            }
-            this.saveToStorage();
-            this.render();
-        }
-    }
-
-    deleteFromSubtasks(todos, todoId) {
-        for (let todo of todos) {
-            if (todo.subtasks) {
-                const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
-                if (subtaskIndex !== -1) {
-                    todo.subtasks.splice(subtaskIndex, 1);
-                    return true;
-                }
-                // Recursive search
-                if (this.deleteFromSubtasks(todo.subtasks, todoId)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    toggleSubtaskCollapse(projectId, todoId) {
-        const project = this.projects.find(p => p.id === projectId);
-        if (project) {
-            const todo = this.findTodoById(project, todoId);
-            if (todo && todo.subtasks && todo.subtasks.length > 0) {
-                todo.collapsed = !todo.collapsed;
                 this.saveToStorage();
                 this.render();
             }
         }
     }
 
-    addSubtask(projectId, parentId, text, priority = 'medium', dueDate = null) {
-        return this.addTodo(projectId, text, priority, dueDate, parentId);
-    }
+
 
     editTodo(projectId, todoId, newText, newPriority, newDueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
@@ -297,11 +195,6 @@ class TodoApp {
                 ` : ''}
             `;
             
-            // Add drop zone functionality to project items
-            projectItem.addEventListener('dragover', (e) => this.handleDragOver(e));
-            projectItem.addEventListener('drop', (e) => this.handleDrop(e, project.id));
-            projectItem.addEventListener('dragenter', (e) => this.handleDragEnter(e));
-            projectItem.addEventListener('dragleave', (e) => this.handleDragLeave(e));
             
             projectList.appendChild(projectItem);
         });
@@ -460,9 +353,7 @@ class TodoApp {
             const todoWithProject = {
                 ...todo,
                 projectId: project.id,
-                projectName: project.name,
-                // Keep original collapsed state, but default to true if undefined
-                collapsed: todo.collapsed !== undefined ? todo.collapsed : true
+                projectName: project.name
             };
             allTodos.push(todoWithProject);
         });
@@ -470,39 +361,13 @@ class TodoApp {
 
     renderTodoHierarchyForAllProjects(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
             const marginLeft = level * 20;
             
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
                      data-todo-id="${todo.id}" data-project-id="${todo.projectId}" 
                      style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
-                        <div class="drag-handle" 
-                             draggable="true" 
-                             onmousedown="app.handleDragStart(event)" 
-                             ondragstart="app.handleDragStart(event)" 
-                             ondragend="app.handleDragEnd(event)" 
-                             title="Zum Verschieben ziehen">
-                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                            </svg>
-                        </div>
-                        ${hasSubtasks ? `
-                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                    <polyline points="9,18 15,12 9,6"></polyline>
-                                </svg>
-                                <span class="subtask-count">(${todo.subtasks.length})</span>
-                            </button>
-                        ` : '<div class="subtask-spacer"></div>'}
-                        
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
                                onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
@@ -511,14 +376,6 @@ class TodoApp {
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
                         </div>
                         <div class="todo-actions">
-                            ${level < 3 ? `
-                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${todo.projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                </button>
-                            ` : ''}
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
@@ -529,17 +386,6 @@ class TodoApp {
                     </div>
                 </div>
             `;
-            
-            // Add subtasks if not collapsed
-            if (hasSubtasks && !isCollapsed) {
-                // Add subtasks with project info
-                const subtasksWithProject = todo.subtasks.map(subtask => ({
-                    ...subtask,
-                    projectId: todo.projectId,
-                    projectName: todo.projectName
-                }));
-                html += this.renderTodoHierarchyForAllProjects(subtasksWithProject, projectId, level + 1);
-            }
             
             return html;
         }).join('');
@@ -592,39 +438,13 @@ class TodoApp {
 
     renderTodoHierarchyForArchive(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
             const marginLeft = level * 20;
             
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
                      data-todo-id="${todo.id}" data-project-id="${projectId}" 
                      style="padding-left: ${marginLeft + 12}px">
                     <div class="todo-main-content">
-                        <div class="drag-handle" 
-                             draggable="true" 
-                             onmousedown="app.handleDragStart(event)" 
-                             ondragstart="app.handleDragStart(event)" 
-                             ondragend="app.handleDragEnd(event)" 
-                             title="Zum Verschieben ziehen">
-                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                            </svg>
-                        </div>
-                        ${hasSubtasks ? `
-                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                    <polyline points="9,18 15,12 9,6"></polyline>
-                                </svg>
-                                <span class="subtask-count">(${todo.subtasks.length})</span>
-                            </button>
-                        ` : '<div class="subtask-spacer"></div>'}
-                        
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
                                onchange="app.toggleTodo('${projectId}', '${todo.id}')">
@@ -634,18 +454,6 @@ class TodoApp {
                             ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
                         </div>
                         <div class="todo-actions">
-                            ${level < 3 ? `
-                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M8 6h13"></path>
-                                        <path d="M8 12h13"></path>
-                                        <path d="M8 18h13"></path>
-                                        <path d="M3 6h.01"></path>
-                                        <path d="M3 12h.01"></path>
-                                        <path d="M3 18h.01"></path>
-                                    </svg>
-                                </button>
-                            ` : ''}
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
@@ -656,11 +464,6 @@ class TodoApp {
                     </div>
                 </div>
             `;
-            
-            // Add subtasks if not collapsed
-            if (hasSubtasks && !isCollapsed) {
-                html += this.renderTodoHierarchyForArchive(todo.subtasks, projectId, level + 1);
-            }
             
             return html;
         }).join('');
@@ -753,12 +556,6 @@ class TodoApp {
             return new Date(b.createdAt) - new Date(a.createdAt);
         });
 
-        // Sort subtasks recursively
-        sorted.forEach(todo => {
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks = this.sortTodosByPriority(todo.subtasks);
-            }
-        });
 
         return sorted;
     }
@@ -779,12 +576,6 @@ class TodoApp {
             return createdB - createdA;
         });
 
-        // Sort subtasks recursively with same logic
-        sorted.forEach(todo => {
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks = this.sortTodosForArchive(todo.subtasks);
-            }
-        });
 
         return sorted;
     }
@@ -802,28 +593,13 @@ class TodoApp {
         
         todos.forEach(todo => {
             const matchesText = todo.text.toLowerCase().includes(term);
-            const hasMatchingSubtasks = todo.subtasks && this.hasMatchingSubtasks(todo.subtasks, term);
             
-            if (matchesText || hasMatchingSubtasks) {
-                const todoClone = { ...todo };
-                
-                if (todo.subtasks) {
-                    todoClone.subtasks = this.filterTodosRecursive(todo.subtasks, searchTerm);
-                }
-                
-                filtered.push(todoClone);
+            if (matchesText) {
+                filtered.push({ ...todo });
             }
         });
         
         return filtered;
-    }
-
-    hasMatchingSubtasks(subtasks, term) {
-        return subtasks.some(subtask => {
-            const matchesText = subtask.text.toLowerCase().includes(term);
-            const hasMatchingChildren = subtask.subtasks && this.hasMatchingSubtasks(subtask.subtasks, term);
-            return matchesText || hasMatchingChildren;
-        });
     }
 
     renderTodoHierarchy(todos, projectId, level = 0) {
@@ -873,38 +649,13 @@ class TodoApp {
     }
 
     renderSingleTodo(todo, projectId, level) {
-        const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-        const isCollapsed = todo.collapsed || false;
         const marginLeft = level * 20;
         
         let html = `
-            <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
+            <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
                  data-todo-id="${todo.id}" data-project-id="${projectId}" 
                  style="padding-left: ${marginLeft + 12}px">
                 <div class="todo-main-content">
-                    <div class="drag-handle" 
-                         draggable="true" 
-                         onmousedown="app.handleDragStart(event)" 
-                         ondragstart="app.handleDragStart(event)" 
-                         ondragend="app.handleDragEnd(event)" 
-                         title="Zum Verschieben ziehen">
-                        <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                            <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                            <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                        </svg>
-                    </div>
-                    ${hasSubtasks ? `
-                        <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                <polyline points="9,18 15,12 9,6"></polyline>
-                            </svg>
-                        </button>
-                    ` : '<div class="subtask-spacer"></div>'}
-                    
                     <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                            ${todo.completed ? 'checked' : ''} 
                            onchange="app.toggleTodo('${projectId}', '${todo.id}')">
@@ -913,18 +664,6 @@ class TodoApp {
                         ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
                     </div>
                     <div class="todo-actions">
-                        ${level < 3 ? `
-                            <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M8 6h13"></path>
-                                    <path d="M8 12h13"></path>
-                                    <path d="M8 18h13"></path>
-                                    <path d="M3 6h.01"></path>
-                                    <path d="M3 12h.01"></path>
-                                    <path d="M3 18h.01"></path>
-                                </svg>
-                            </button>
-                        ` : ''}
                         <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
@@ -935,11 +674,6 @@ class TodoApp {
                 </div>
             </div>
         `;
-        
-        // Add subtasks if not collapsed (alle Subtasks zusammen, ohne Trennung)
-        if (hasSubtasks && !isCollapsed) {
-            html += this.renderTodoHierarchy(todo.subtasks, projectId, level + 1);
-        }
         
         return html;
     }
@@ -1085,55 +819,6 @@ class TodoApp {
         this.render();
     }
 
-    showAddSubtaskForm(projectId, parentId) {
-        // Create inline form for adding subtask
-        const parentElement = document.querySelector(`[data-todo-id="${parentId}"]`);
-        if (!parentElement) return;
-
-        // Check if form already exists
-        if (parentElement.querySelector('.add-subtask-form')) return;
-
-        const formHtml = `
-            <div class="add-subtask-form" style="margin-left: 40px; margin-top: 8px;">
-                <div class="subtask-input-row">
-                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="subtask-input" autocomplete="off" autocorrect="off" spellcheck="false">
-                    <button onclick="app.submitSubtask('${projectId}', '${parentId}')" class="btn-small btn-confirm" title="Hinzufügen">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
-                    </button>
-                    <button onclick="app.cancelAddSubtask('${parentId}')" class="btn-small btn-cancel" title="Abbrechen">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        parentElement.insertAdjacentHTML('afterend', formHtml);
-        document.getElementById(`subtask-text-${parentId}`).focus();
-    }
-
-    submitSubtask(projectId, parentId) {
-        const textInput = document.getElementById(`subtask-text-${parentId}`);
-        
-        const originalText = textInput.value.trim();
-        
-        if (originalText) {
-            // Parse Priorität aus dem Text
-            const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
-            
-            // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
-            const finalPriority = parsedPriority || 'medium';
-            
-            this.addSubtask(projectId, parentId, text, finalPriority);
-            this.cancelAddSubtask(parentId);
-        }
-    }
-
-    cancelAddSubtask(parentId) {
-        const form = document.querySelector('.add-subtask-form');
-        if (form) {
-            form.remove();
-        }
-    }
 
     showAddProjectForm() {
         document.getElementById('add-project-form').style.display = 'flex';
@@ -1206,12 +891,6 @@ class TodoApp {
                 this.submitTodo(projectId);
             }
             
-            // Event listener für Subtask-Eingabefelder
-            if (e.target.classList.contains('subtask-input') && e.key === 'Enter') {
-                const parentId = e.target.id.replace('subtask-text-', '');
-                const projectId = this.currentProjectId; // Use current project
-                this.submitSubtask(projectId, parentId);
-            }
             
             // Event listener für Edit-Todo-Eingabefelder
             if (e.target.classList.contains('edit-input') && e.key === 'Enter') {
@@ -1220,11 +899,6 @@ class TodoApp {
                 this.saveEditTodo(projectId, todoId);
             }
             
-            // ESC zum Abbrechen von Subtask-Formularen
-            if (e.key === 'Escape' && e.target.classList.contains('subtask-input')) {
-                const parentId = e.target.id.replace('subtask-text-', '');
-                this.cancelAddSubtask(parentId);
-            }
             
             // ESC zum Abbrechen von Edit-Formularen
             if (e.key === 'Escape' && e.target.classList.contains('edit-input')) {
@@ -1792,10 +1466,6 @@ class TodoApp {
             if (todo.completed) {
                 count++;
             }
-            // Count completed subtasks recursively
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                count += this.countCompletedTodosInList(todo.subtasks);
-            }
         });
         return count;
     }
@@ -1945,159 +1615,6 @@ class TodoApp {
         });
     }
 
-    handleDragStart(event) {
-        // Only allow drag if initiated from drag handle
-        if (!event.target.closest('.drag-handle')) {
-            event.preventDefault();
-            return false;
-        }
-        
-        const dragHandle = event.currentTarget;
-        const todoElement = dragHandle.closest('.todo-item');
-        
-        if (!todoElement) {
-            event.preventDefault();
-            return false;
-        }
-        
-        const todoId = todoElement.dataset.todoId;
-        const projectId = todoElement.dataset.projectId;
-        
-        // Store drag data
-        this.dragData = {
-            todoId: todoId,
-            sourceProjectId: projectId
-        };
-        
-        // Add visual feedback to the todo item
-        todoElement.classList.add('dragging');
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', todoId);
-        
-        // Create a custom drag image (optional)
-        const dragImage = todoElement.cloneNode(true);
-        dragImage.style.transform = 'scale(0.8)';
-        dragImage.style.opacity = '0.8';
-        document.body.appendChild(dragImage);
-        event.dataTransfer.setDragImage(dragImage, 0, 0);
-        setTimeout(() => document.body.removeChild(dragImage), 0);
-    }
-
-    handleDragEnd(event) {
-        const dragHandle = event.currentTarget;
-        const todoElement = dragHandle.closest('.todo-item');
-        
-        if (todoElement) {
-            todoElement.classList.remove('dragging');
-        }
-        
-        // Remove drag feedback from all elements
-        document.querySelectorAll('.project-item').forEach(item => {
-            item.classList.remove('drag-over');
-        });
-        
-        // Clear drag data
-        this.dragData = null;
-    }
-
-    handleDragOver(event) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-    }
-
-    handleDragEnter(event) {
-        event.preventDefault();
-        if (this.dragData) {
-            const projectItem = event.currentTarget;
-            projectItem.classList.add('drag-over');
-        }
-    }
-
-    handleDragLeave(event) {
-        const projectItem = event.currentTarget;
-        // Only remove if really leaving the element
-        if (!projectItem.contains(event.relatedTarget)) {
-            projectItem.classList.remove('drag-over');
-        }
-    }
-
-    handleDrop(event, targetProjectId) {
-        event.preventDefault();
-        const projectItem = event.currentTarget;
-        projectItem.classList.remove('drag-over');
-        
-        if (!this.dragData || !targetProjectId) return;
-        
-        const { todoId, sourceProjectId } = this.dragData;
-        
-        // Don't do anything if dropping on the same project
-        if (sourceProjectId === targetProjectId) return;
-        
-        // Don't allow dropping into archive project from UI
-        if (targetProjectId === 'archive') return;
-        
-        this.moveTodoToProject(todoId, sourceProjectId, targetProjectId);
-    }
-
-    moveTodoToProject(todoId, sourceProjectId, targetProjectId) {
-        const sourceProject = this.projects.find(p => p.id === sourceProjectId);
-        const targetProject = this.projects.find(p => p.id === targetProjectId);
-        
-        if (!sourceProject || !targetProject) {
-            console.error('Source or target project not found');
-            return;
-        }
-        
-        // Find and remove the todo from source project
-        const todo = this.findAndRemoveTodo(sourceProject, todoId);
-        if (!todo) {
-            console.error('Todo not found in source project');
-            return;
-        }
-        
-        // Add todo to target project
-        targetProject.todos.push(todo);
-        
-        this.saveToStorage();
-        this.renderSidebar();
-        this.render();
-        
-        // Show success message
-        this.showToast(`Todo zu "${targetProject.name}" verschoben`, 'success');
-    }
-
-    findAndRemoveTodo(project, todoId) {
-        // Check main todos
-        const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
-        if (mainTodoIndex !== -1) {
-            return project.todos.splice(mainTodoIndex, 1)[0];
-        }
-        
-        // Check subtasks recursively
-        for (let todo of project.todos) {
-            const foundTodo = this.findAndRemoveFromSubtasks(todo, todoId);
-            if (foundTodo) return foundTodo;
-        }
-        
-        return null;
-    }
-
-    findAndRemoveFromSubtasks(todo, todoId) {
-        if (!todo.subtasks) return null;
-        
-        const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
-        if (subtaskIndex !== -1) {
-            return todo.subtasks.splice(subtaskIndex, 1)[0];
-        }
-        
-        // Search in nested subtasks
-        for (let subtask of todo.subtasks) {
-            const foundTodo = this.findAndRemoveFromSubtasks(subtask, todoId);
-            if (foundTodo) return foundTodo;
-        }
-        
-        return null;
-    }
 }
 
 const app = new TodoApp();
