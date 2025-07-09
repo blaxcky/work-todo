@@ -77,18 +77,13 @@ class TodoApp {
     }
 
     toggleTodo(projectId, todoId) {
-        console.log('toggleTodo called with projectId:', projectId, 'todoId:', todoId);
         const project = this.projects.find(p => p.id === projectId);
-        console.log('Found project:', project ? project.name : 'not found');
         if (project) {
             const todo = this.findTodoById(project, todoId);
-            console.log('Found todo:', todo ? todo.text : 'not found');
             if (todo) {
                 // Animation nur bei Completion (nicht beim Un-Check)
                 const wasCompleted = todo.completed;
-                console.log('Todo was completed:', wasCompleted);
                 todo.completed = !todo.completed;
-                console.log('Todo is now completed:', todo.completed);
                 
                 
                 if (!wasCompleted) {
@@ -407,7 +402,7 @@ class TodoApp {
                     <div class="todo-main-content">
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
-                               onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
+                               >
                         <div class="todo-content">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
@@ -481,7 +476,7 @@ class TodoApp {
                     <div class="todo-main-content">
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
-                               onchange="app.toggleTodo('${projectId}', '${todo.id}')">
+                               >
                         <div class="todo-content">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
@@ -681,7 +676,7 @@ class TodoApp {
                 <div class="todo-main-content">
                     <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                            ${todo.completed ? 'checked' : ''} 
-                           onchange="app.toggleTodo('${projectId}', '${todo.id}')">
+                           >
                     <div class="todo-content">
                         <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                         ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
@@ -1640,15 +1635,17 @@ class TodoApp {
     
     bindCheckboxEvents() {
         const checkboxes = document.querySelectorAll('.todo-checkbox');
-        console.log('Binding events to checkboxes:', checkboxes.length);
         
         checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
+            // Remove existing event listeners by cloning the element
+            const newCheckbox = checkbox.cloneNode(true);
+            checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+            
+            newCheckbox.addEventListener('change', (e) => {
                 e.stopPropagation();
-                const todoItem = checkbox.closest('.todo-item');
+                const todoItem = newCheckbox.closest('.todo-item');
                 const todoId = todoItem.dataset.todoId;
                 const projectId = todoItem.dataset.projectId;
-                console.log('Checkbox changed for todo:', todoId, 'in project:', projectId);
                 this.toggleTodo(projectId, todoId);
             });
         });
