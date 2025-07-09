@@ -404,9 +404,11 @@ class TodoApp {
     renderAllProjects(container) {
         let allTodos = [];
         
-        // Alle Todos aus allen Projekten sammeln (inkl. Subtasks)
+        // Alle Todos aus allen Projekten sammeln (inkl. Subtasks) - Archiv ausschließen
         this.projects.forEach(project => {
-            this.collectAllTodosFromProject(project, allTodos);
+            if (project.id !== 'archive') {
+                this.collectAllTodosFromProject(project, allTodos);
+            }
         });
 
         // Nach Suchbegriff filtern
