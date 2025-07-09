@@ -921,8 +921,9 @@ class TodoApp {
                 if (newDateInput) {
                     newDateInput.value = '';
                 }
+                // Section dropdown behält den ausgewählten Wert bei
                 if (newSectionSelect) {
-                    newSectionSelect.value = 'general';
+                    newSectionSelect.value = selectedSection;
                 }
             }, 0);
         }
