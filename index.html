@@ -219,6 +219,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Delete Todo Confirmation Modal -->
+        <div id="delete-todo-modal" class="modal" style="display: none;">
+            <div class="modal-content archive-modal-content">
+                <div class="modal-header">
+                    <h3>Todo löschen</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="archive-info">
+                        <div class="archive-icon">🗑️</div>
+                        <p id="delete-todo-text">Soll dieses Todo wirklich gelöscht werden?</p>
+                        <div class="todo-preview" id="delete-todo-preview">
+                            <!-- Todo content will be inserted here -->
+                        </div>
+                        <div class="archive-warning">
+                            ⚠️ Diese Aktion kann nicht rückgängig gemacht werden.
+                        </div>
+                    </div>
+                    <div class="archive-actions">
+                        <button id="delete-todo-cancel" class="btn-secondary">Abbrechen</button>
+                        <button id="delete-todo-confirm" class="btn-danger">Löschen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <!-- Floating Archive Button -->
         <button id="floating-archive-btn" class="floating-archive-btn" style="display: none;" title="Erledigte Todos archivieren">

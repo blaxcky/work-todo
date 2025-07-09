@@ -1280,6 +1280,99 @@ body.dark-theme .edit-todo-form {
     border-color: #555;
 }
 
+/* Delete Todo Modal */
+.todo-preview {
+    margin: 16px 0;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-family: inherit;
+}
+
+.todo-preview .todo-text {
+    font-weight: 500;
+    color: #2c3e50;
+    word-break: break-word;
+}
+
+.todo-preview .todo-meta {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin-top: 8px;
+}
+
+.todo-preview .priority-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.todo-preview .priority-badge.high {
+    background: #fee;
+    color: #c0392b;
+}
+
+.todo-preview .priority-badge.medium {
+    background: #fef7e0;
+    color: #d68910;
+}
+
+.todo-preview .priority-badge.low {
+    background: #e8f5e8;
+    color: #27ae60;
+}
+
+.todo-preview .todo-due-date {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.todo-preview .todo-due-date.overdue {
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+/* Dark theme for todo preview */
+body.dark-theme .todo-preview {
+    background: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-theme .todo-preview .todo-text {
+    color: #e0e0e0;
+}
+
+body.dark-theme .todo-preview .todo-meta {
+    color: #aaa;
+}
+
+body.dark-theme .todo-preview .priority-badge.high {
+    background: #4a2c2c;
+    color: #ff6b6b;
+}
+
+body.dark-theme .todo-preview .priority-badge.medium {
+    background: #4a3c2c;
+    color: #ffd93d;
+}
+
+body.dark-theme .todo-preview .priority-badge.low {
+    background: #2c4a2c;
+    color: #6bcf7f;
+}
+
+body.dark-theme .todo-preview .todo-due-date {
+    color: #aaa;
+}
+
+body.dark-theme .todo-preview .todo-due-date.overdue {
+    color: #ff6b6b;
+}
+
 body.dark-theme .search-input::placeholder,
 body.dark-theme #project-name-input::placeholder,
 body.dark-theme .todo-date-input::placeholder,

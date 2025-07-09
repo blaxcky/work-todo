@@ -114,6 +114,46 @@ class TodoApp {
     }
 
 
+    showDeleteTodoModal(projectId, todoId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const todo = this.findTodoById(project, todoId);
+        if (!todo) return;
+        
+        // Store the todo info for deletion
+        this.todoToDelete = { projectId, todoId };
+        
+        // Update modal content
+        const previewElement = document.getElementById('delete-todo-preview');
+        const priorityText = this.getPriorityText(todo.priority);
+        const dueDateHtml = todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : '';
+        
+        previewElement.innerHTML = `
+            <div class="todo-text">${todo.text}</div>
+            <div class="todo-meta">
+                <span class="priority-badge ${todo.priority}">${priorityText}</span>
+                ${dueDateHtml}
+            </div>
+        `;
+        
+        // Show modal
+        document.getElementById('delete-todo-modal').style.display = 'flex';
+    }
+    
+    hideDeleteTodoModal() {
+        document.getElementById('delete-todo-modal').style.display = 'none';
+        this.todoToDelete = null;
+    }
+    
+    confirmDeleteTodo() {
+        if (!this.todoToDelete) return;
+        
+        const { projectId, todoId } = this.todoToDelete;
+        this.deleteTodo(projectId, todoId);
+        this.hideDeleteTodoModal();
+    }
+
     deleteTodo(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
@@ -376,7 +416,7 @@ class TodoApp {
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')" title="Löschen">
+                            <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${todo.projectId}', '${todo.id}')" title="Löschen">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
@@ -451,7 +491,7 @@ class TodoApp {
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
+                            <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${projectId}', '${todo.id}')" title="Löschen">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
@@ -650,7 +690,7 @@ class TodoApp {
                         <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                        <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
+                        <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${projectId}', '${todo.id}')" title="Löschen">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
                     </div>
@@ -970,6 +1010,12 @@ class TodoApp {
             }
         });
 
+        document.getElementById('delete-todo-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'delete-todo-modal') {
+                this.hideDeleteTodoModal();
+            }
+        });
+
         document.getElementById('export-json').addEventListener('click', () => {
             this.exportData('json');
         });
@@ -1024,6 +1070,15 @@ class TodoApp {
 
         document.getElementById('clear-archive-confirm').addEventListener('click', () => {
             this.confirmClearArchive();
+        });
+
+        // Delete todo modal events
+        document.getElementById('delete-todo-cancel').addEventListener('click', () => {
+            this.hideDeleteTodoModal();
+        });
+
+        document.getElementById('delete-todo-confirm').addEventListener('click', () => {
+            this.confirmDeleteTodo();
         });
     }
 
@@ -1125,6 +1180,7 @@ class TodoApp {
         this.hideImportModal();
         this.hideArchiveModal();
         this.hideClearArchiveModal();
+        this.hideDeleteTodoModal();
     }
 
     showArchiveModal() {
