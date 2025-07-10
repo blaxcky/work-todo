@@ -4,7 +4,8 @@ class TodoApp {
             {
                 id: 'default',
                 name: 'Meine Todos',
-                todos: []
+                todos: [],
+                sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
             }
         ];
         this.searchTerm = '';
@@ -30,31 +31,23 @@ class TodoApp {
         
         const projects = JSON.parse(data);
         
-        // Migration: Ensure all todos have subtask fields
+        // Migrate existing projects to support sections
         projects.forEach(project => {
+            if (!project.sections) {
+                project.sections = [{ id: 'general', name: 'Allgemein', collapsed: false }];
+            }
+            
+            // Migrate existing todos to have a section
             project.todos.forEach(todo => {
-                if (!todo.subtasks) todo.subtasks = [];
-                if (todo.collapsed === undefined) todo.collapsed = false;
-                if (!todo.parentId) todo.parentId = null;
-                
-                // Recursively migrate subtasks
-                this.migrateTodoData(todo);
+                if (!todo.section) {
+                    todo.section = 'general';
+                }
             });
         });
         
         return projects;
     }
 
-    migrateTodoData(todo) {
-        if (todo.subtasks) {
-            todo.subtasks.forEach(subtask => {
-                if (!subtask.subtasks) subtask.subtasks = [];
-                if (subtask.collapsed === undefined) subtask.collapsed = false;
-                if (!subtask.parentId) subtask.parentId = todo.id;
-                this.migrateTodoData(subtask);
-            });
-        }
-    }
 
     saveToStorage() {
         localStorage.setItem('todoApp', JSON.stringify(this.projects));
@@ -64,7 +57,8 @@ class TodoApp {
         const project = {
             id: Date.now().toString(),
             name: name,
-            todos: []
+            todos: [],
+            sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
         };
         this.projects.push(project);
         this.saveToStorage();
@@ -73,33 +67,10 @@ class TodoApp {
     }
 
     findTodoById(project, todoId) {
-        // Search in main todos
-        for (let todo of project.todos) {
-            if (todo.id === todoId) {
-                return todo;
-            }
-            // Search in subtasks recursively
-            const found = this.findTodoInSubtasks(todo, todoId);
-            if (found) return found;
-        }
-        return null;
+        return project.todos.find(todo => todo.id === todoId) || null;
     }
 
-    findTodoInSubtasks(todo, todoId) {
-        if (!todo.subtasks) return null;
-        
-        for (let subtask of todo.subtasks) {
-            if (subtask.id === todoId) {
-                return subtask;
-            }
-            // Recursive search in nested subtasks
-            const found = this.findTodoInSubtasks(subtask, todoId);
-            if (found) return found;
-        }
-        return null;
-    }
-
-    addTodo(projectId, text, priority = 'medium', dueDate = null, parentId = null) {
+    addTodo(projectId, text, priority = 'medium', dueDate = null, section = 'general') {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
             const todo = {
@@ -108,21 +79,11 @@ class TodoApp {
                 completed: false,
                 priority: priority,
                 dueDate: dueDate,
-                createdAt: new Date(),
-                parentId: parentId,
-                subtasks: [],
-                collapsed: false
+                section: section,
+                createdAt: new Date()
             };
             
-            if (parentId) {
-                // Find parent todo and add this as subtask
-                const parentTodo = this.findTodoById(project, parentId);
-                if (parentTodo) {
-                    parentTodo.subtasks.push(todo);
-                }
-            } else {
-                project.todos.push(todo);
-            }
+            project.todos.push(todo);
             
             this.saveToStorage();
             this.render();
@@ -132,26 +93,15 @@ class TodoApp {
     }
 
     toggleTodo(projectId, todoId) {
-        console.log('toggleTodo called with projectId:', projectId, 'todoId:', todoId);
         const project = this.projects.find(p => p.id === projectId);
-        console.log('Found project:', project ? project.name : 'not found');
         if (project) {
             const todo = this.findTodoById(project, todoId);
-            console.log('Found todo:', todo ? todo.text : 'not found');
             if (todo) {
-                // Animation nur bei Completion (nicht beim Un-Check)
                 const wasCompleted = todo.completed;
-                console.log('Todo was completed:', wasCompleted);
                 todo.completed = !todo.completed;
-                console.log('Todo is now completed:', todo.completed);
-                
-                // If todo has subtasks, toggle them too
-                if (todo.subtasks && todo.subtasks.length > 0) {
-                    this.toggleSubtasks(todo.subtasks, todo.completed);
-                }
                 
                 if (!wasCompleted) {
-                    // Todo wurde gerade erledigt - Animation für das Verschieben nach unten
+                    // Todo wurde gerade erledigt - Auto-Archive with animation
                     const todoElement = document.querySelector(`[data-todo-id="${todoId}"]`);
                     if (todoElement) {
                         todoElement.style.transition = 'all 0.3s ease';
@@ -159,9 +109,18 @@ class TodoApp {
                         todoElement.style.opacity = '0.8';
                         
                         setTimeout(() => {
-                            this.saveToStorage();
-                            this.render();
+                            this.autoArchiveTodo(projectId, todoId);
                         }, 300);
+                        return;
+                    } else {
+                        // No animation element found, archive immediately
+                        this.autoArchiveTodo(projectId, todoId);
+                        return;
+                    }
+                } else {
+                    // Todo wurde un-completed - restore from archive if it's in archive
+                    if (projectId === 'archive') {
+                        this.restoreTodoFromArchive(todoId);
                         return;
                     }
                 }
@@ -172,63 +131,139 @@ class TodoApp {
         }
     }
 
-    toggleSubtasks(subtasks, completed) {
-        subtasks.forEach(subtask => {
-            subtask.completed = completed;
-            if (subtask.subtasks && subtask.subtasks.length > 0) {
-                this.toggleSubtasks(subtask.subtasks, completed);
+    autoArchiveTodo(projectId, todoId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const todoIndex = project.todos.findIndex(t => t.id === todoId);
+        if (todoIndex === -1) return;
+        
+        const todo = project.todos[todoIndex];
+        
+        // Store original location info
+        todo.originalProjectId = projectId;
+        todo.originalProjectName = project.name;
+        todo.originalSection = todo.section;
+        todo.archivedAt = new Date();
+        
+        // Find or create archive project
+        let archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject) {
+            archiveProject = {
+                id: 'archive',
+                name: 'Archiv',
+                todos: [],
+                sections: [{ id: 'general', name: 'Allgemein', collapsed: false }]
+            };
+            this.projects.push(archiveProject);
+        }
+        
+        // Move todo to archive (at the beginning so newest are on top)
+        project.todos.splice(todoIndex, 1);
+        archiveProject.todos.unshift(todo);
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+    }
+
+    restoreTodoFromArchive(todoId) {
+        const archiveProject = this.projects.find(p => p.id === 'archive');
+        if (!archiveProject) return;
+        
+        const todoIndex = archiveProject.todos.findIndex(t => t.id === todoId);
+        if (todoIndex === -1) return;
+        
+        const todo = archiveProject.todos[todoIndex];
+        
+        // Find original project or use default
+        let originalProject = this.projects.find(p => p.id === todo.originalProjectId);
+        if (!originalProject) {
+            // If original project doesn't exist, use default project
+            originalProject = this.projects.find(p => p.id === 'default') || this.projects[0];
+        }
+        
+        // Restore original section if it exists
+        if (originalProject.sections && todo.originalSection) {
+            const sectionExists = originalProject.sections.find(s => s.id === todo.originalSection);
+            if (!sectionExists) {
+                // If original section doesn't exist, use general section
+                todo.section = 'general';
+            } else {
+                todo.section = todo.originalSection;
             }
-        });
+        } else {
+            todo.section = 'general';
+        }
+        
+        // Clean up archive metadata
+        delete todo.originalProjectId;
+        delete todo.originalProjectName;
+        delete todo.originalSection;
+        delete todo.archivedAt;
+        
+        // Move todo back to original project
+        archiveProject.todos.splice(todoIndex, 1);
+        originalProject.todos.push(todo);
+        
+        this.saveToStorage();
+        this.renderSidebar();
+        this.render();
+    }
+
+    showDeleteTodoModal(projectId, todoId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const todo = this.findTodoById(project, todoId);
+        if (!todo) return;
+        
+        // Store the todo info for deletion
+        this.todoToDelete = { projectId, todoId };
+        
+        // Update modal content
+        const previewElement = document.getElementById('delete-todo-preview');
+        const priorityText = this.getPriorityText(todo.priority);
+        const dueDateHtml = todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : '';
+        
+        previewElement.innerHTML = `
+            <div class="todo-text">${todo.text}</div>
+            <div class="todo-meta">
+                <span class="priority-badge ${todo.priority}">${priorityText}</span>
+                ${dueDateHtml}
+            </div>
+        `;
+        
+        // Show modal
+        document.getElementById('delete-todo-modal').style.display = 'flex';
+    }
+    
+    hideDeleteTodoModal() {
+        document.getElementById('delete-todo-modal').style.display = 'none';
+        this.todoToDelete = null;
+    }
+    
+    confirmDeleteTodo() {
+        if (!this.todoToDelete) return;
+        
+        const { projectId, todoId } = this.todoToDelete;
+        this.deleteTodo(projectId, todoId);
+        this.hideDeleteTodoModal();
     }
 
     deleteTodo(projectId, todoId) {
         const project = this.projects.find(p => p.id === projectId);
         if (project) {
-            // Try to delete from main todos
             const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
             if (mainTodoIndex !== -1) {
                 project.todos.splice(mainTodoIndex, 1);
-            } else {
-                // Search and delete from subtasks
-                this.deleteFromSubtasks(project.todos, todoId);
-            }
-            this.saveToStorage();
-            this.render();
-        }
-    }
-
-    deleteFromSubtasks(todos, todoId) {
-        for (let todo of todos) {
-            if (todo.subtasks) {
-                const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
-                if (subtaskIndex !== -1) {
-                    todo.subtasks.splice(subtaskIndex, 1);
-                    return true;
-                }
-                // Recursive search
-                if (this.deleteFromSubtasks(todo.subtasks, todoId)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    toggleSubtaskCollapse(projectId, todoId) {
-        const project = this.projects.find(p => p.id === projectId);
-        if (project) {
-            const todo = this.findTodoById(project, todoId);
-            if (todo && todo.subtasks && todo.subtasks.length > 0) {
-                todo.collapsed = !todo.collapsed;
                 this.saveToStorage();
                 this.render();
             }
         }
     }
 
-    addSubtask(projectId, parentId, text, priority = 'medium', dueDate = null) {
-        return this.addTodo(projectId, text, priority, dueDate, parentId);
-    }
+
 
     editTodo(projectId, todoId, newText, newPriority, newDueDate = null) {
         const project = this.projects.find(p => p.id === projectId);
@@ -297,11 +332,6 @@ class TodoApp {
                 ` : ''}
             `;
             
-            // Add drop zone functionality to project items
-            projectItem.addEventListener('dragover', (e) => this.handleDragOver(e));
-            projectItem.addEventListener('drop', (e) => this.handleDrop(e, project.id));
-            projectItem.addEventListener('dragenter', (e) => this.handleDragEnter(e));
-            projectItem.addEventListener('dragleave', (e) => this.handleDragLeave(e));
             
             projectList.appendChild(projectItem);
         });
@@ -344,25 +374,17 @@ class TodoApp {
         this.updatePageTitle();
         this.updateFloatingArchiveButton();
         
-        // Update completed section visibility after rendering
+        // Update DOM after rendering
         setTimeout(() => {
-            this.updateCompletedSectionVisibility();
-            this.bindCompletedSectionEvents();
             this.bindCheckboxEvents();
+            this.bindSectionKeyboardEvents();
         }, 50);
     }
 
     updateFloatingArchiveButton() {
+        // Hide floating archive button since todos now auto-archive
         const floatingBtn = document.getElementById('floating-archive-btn');
-        const badge = document.getElementById('floating-archive-badge');
-        const completedMainTodosCount = this.countCompletedMainTodos();
-        
-        // Zeige den Button nur wenn es erledigte Main-Todos gibt und nicht im Archiv
-        if (completedMainTodosCount > 0 && this.currentProjectId !== 'archive') {
-            floatingBtn.style.display = 'flex';
-            badge.textContent = completedMainTodosCount;
-            floatingBtn.title = `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} archivieren`;
-        } else {
+        if (floatingBtn) {
             floatingBtn.style.display = 'none';
         }
     }
@@ -381,17 +403,24 @@ class TodoApp {
 
         const sortedTodos = this.sortTodosByPriority([...filteredTodos]);
 
+        const sectionOptions = currentProject.sections.map(section => 
+            `<option value="${section.id}">${section.name}</option>`
+        ).join('');
+
         container.innerHTML = `
             <div class="project-section">
                 <div class="add-todo-form">
                     <div class="input-row">
                         <input type="text" id="todo-text-${currentProject.id}" placeholder="Neues Todo hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="todo-input" autocomplete="off" autocorrect="off" spellcheck="false">
                         <input type="date" id="todo-date-${currentProject.id}" class="todo-date-input" title="Fälligkeitsdatum (optional)" autocomplete="off">
+                        <select id="todo-section-${currentProject.id}" class="todo-section-select" title="Bereich auswählen">
+                            ${sectionOptions}
+                        </select>
                         <button onclick="app.submitTodo('${currentProject.id}')" class="add-btn">+</button>
                     </div>
                 </div>
                 <div class="todos-list">
-                    ${sortedTodos.length > 0 ? this.renderTodoHierarchy(sortedTodos, currentProject.id) : '<div class="no-todos">Noch keine Todos in diesem Projekt</div>'}
+                    ${this.renderTodoHierarchy(sortedTodos, currentProject.id)}
                 </div>
             </div>
         `;
@@ -404,9 +433,11 @@ class TodoApp {
     renderAllProjects(container) {
         let allTodos = [];
         
-        // Alle Todos aus allen Projekten sammeln (inkl. Subtasks)
+        // Alle Todos aus allen Projekten sammeln (inkl. Subtasks) - Archiv ausschließen
         this.projects.forEach(project => {
-            this.collectAllTodosFromProject(project, allTodos);
+            if (project.id !== 'archive') {
+                this.collectAllTodosFromProject(project, allTodos);
+            }
         });
 
         // Nach Suchbegriff filtern
@@ -458,9 +489,7 @@ class TodoApp {
             const todoWithProject = {
                 ...todo,
                 projectId: project.id,
-                projectName: project.name,
-                // Keep original collapsed state, but default to true if undefined
-                collapsed: todo.collapsed !== undefined ? todo.collapsed : true
+                projectName: project.name
             };
             allTodos.push(todoWithProject);
         });
@@ -468,76 +497,28 @@ class TodoApp {
 
     renderTodoHierarchyForAllProjects(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
-            const marginLeft = level * 20;
-            
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                     data-todo-id="${todo.id}" data-project-id="${todo.projectId}" 
-                     style="padding-left: ${marginLeft + 12}px">
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                     data-todo-id="${todo.id}" data-project-id="${todo.projectId}">
                     <div class="todo-main-content">
-                        <div class="drag-handle" 
-                             draggable="true" 
-                             onmousedown="app.handleDragStart(event)" 
-                             ondragstart="app.handleDragStart(event)" 
-                             ondragend="app.handleDragEnd(event)" 
-                             title="Zum Verschieben ziehen">
-                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                            </svg>
-                        </div>
-                        ${hasSubtasks ? `
-                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${todo.projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                    <polyline points="9,18 15,12 9,6"></polyline>
-                                </svg>
-                                <span class="subtask-count">(${todo.subtasks.length})</span>
-                            </button>
-                        ` : '<div class="subtask-spacer"></div>'}
-                        
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
-                               onchange="app.toggleTodo('${todo.projectId}', '${todo.id}')">
+                               >
                         <div class="todo-content">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
                         </div>
                         <div class="todo-actions">
-                            ${level < 3 ? `
-                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${todo.projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                </button>
-                            ` : ''}
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${todo.projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${todo.projectId}', '${todo.id}')" title="Löschen">
+                            <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${todo.projectId}', '${todo.id}')" title="Löschen">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
                     </div>
                 </div>
             `;
-            
-            // Add subtasks if not collapsed
-            if (hasSubtasks && !isCollapsed) {
-                // Add subtasks with project info
-                const subtasksWithProject = todo.subtasks.map(subtask => ({
-                    ...subtask,
-                    projectId: todo.projectId,
-                    projectName: todo.projectName
-                }));
-                html += this.renderTodoHierarchyForAllProjects(subtasksWithProject, projectId, level + 1);
-            }
             
             return html;
         }).join('');
@@ -590,75 +571,29 @@ class TodoApp {
 
     renderTodoHierarchyForArchive(todos, projectId, level = 0) {
         return todos.map(todo => {
-            const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-            const isCollapsed = todo.collapsed !== undefined ? todo.collapsed : true;
-            const marginLeft = level * 20;
-            
             let html = `
-                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                     data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                     style="padding-left: ${marginLeft + 12}px">
+                <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                     data-todo-id="${todo.id}" data-project-id="${projectId}">
                     <div class="todo-main-content">
-                        <div class="drag-handle" 
-                             draggable="true" 
-                             onmousedown="app.handleDragStart(event)" 
-                             ondragstart="app.handleDragStart(event)" 
-                             ondragend="app.handleDragEnd(event)" 
-                             title="Zum Verschieben ziehen">
-                            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                                <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                                <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                            </svg>
-                        </div>
-                        ${hasSubtasks ? `
-                            <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                    <polyline points="9,18 15,12 9,6"></polyline>
-                                </svg>
-                                <span class="subtask-count">(${todo.subtasks.length})</span>
-                            </button>
-                        ` : '<div class="subtask-spacer"></div>'}
-                        
                         <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
                                ${todo.completed ? 'checked' : ''} 
-                               onchange="app.toggleTodo('${projectId}', '${todo.id}')">
+                               >
                         <div class="todo-content">
                             <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
                             ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                            ${todo.originalProject ? `<span class="original-project">aus: ${todo.originalProject}</span>` : ''}
+                            ${todo.originalProjectName ? `<span class="original-project">aus: ${todo.originalProjectName}</span>` : ''}
                         </div>
                         <div class="todo-actions">
-                            ${level < 3 ? `
-                                <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M8 6h13"></path>
-                                        <path d="M8 12h13"></path>
-                                        <path d="M8 18h13"></path>
-                                        <path d="M3 6h.01"></path>
-                                        <path d="M3 12h.01"></path>
-                                        <path d="M3 18h.01"></path>
-                                    </svg>
-                                </button>
-                            ` : ''}
                             <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
+                            <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${projectId}', '${todo.id}')" title="Löschen">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </div>
                     </div>
                 </div>
             `;
-            
-            // Add subtasks if not collapsed
-            if (hasSubtasks && !isCollapsed) {
-                html += this.renderTodoHierarchyForArchive(todo.subtasks, projectId, level + 1);
-            }
             
             return html;
         }).join('');
@@ -751,12 +686,6 @@ class TodoApp {
             return new Date(b.createdAt) - new Date(a.createdAt);
         });
 
-        // Sort subtasks recursively
-        sorted.forEach(todo => {
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks = this.sortTodosByPriority(todo.subtasks);
-            }
-        });
 
         return sorted;
     }
@@ -777,12 +706,6 @@ class TodoApp {
             return createdB - createdA;
         });
 
-        // Sort subtasks recursively with same logic
-        sorted.forEach(todo => {
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks = this.sortTodosForArchive(todo.subtasks);
-            }
-        });
 
         return sorted;
     }
@@ -800,144 +723,123 @@ class TodoApp {
         
         todos.forEach(todo => {
             const matchesText = todo.text.toLowerCase().includes(term);
-            const hasMatchingSubtasks = todo.subtasks && this.hasMatchingSubtasks(todo.subtasks, term);
             
-            if (matchesText || hasMatchingSubtasks) {
-                const todoClone = { ...todo };
-                
-                if (todo.subtasks) {
-                    todoClone.subtasks = this.filterTodosRecursive(todo.subtasks, searchTerm);
-                }
-                
-                filtered.push(todoClone);
+            if (matchesText) {
+                filtered.push({ ...todo });
             }
         });
         
         return filtered;
     }
 
-    hasMatchingSubtasks(subtasks, term) {
-        return subtasks.some(subtask => {
-            const matchesText = subtask.text.toLowerCase().includes(term);
-            const hasMatchingChildren = subtask.subtasks && this.hasMatchingSubtasks(subtask.subtasks, term);
-            return matchesText || hasMatchingChildren;
-        });
-    }
-
     renderTodoHierarchy(todos, projectId, level = 0) {
-        // Nur auf der Top-Level (level = 0) Main-Tasks separieren
-        if (level === 0) {
-            const activeTodos = todos.filter(todo => !todo.completed);
-            const completedTodos = todos.filter(todo => todo.completed);
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return '';
+        
+        let html = '';
+        
+        // Group todos by section
+        const todosBySection = {};
+        todos.forEach(todo => {
+            const sectionId = todo.section || 'general';
+            if (!todosBySection[sectionId]) {
+                todosBySection[sectionId] = [];
+            }
+            todosBySection[sectionId].push(todo);
+        });
+        
+        // Render sections
+        project.sections.forEach(section => {
+            const sectionTodos = todosBySection[section.id] || [];
+            const activeTodos = sectionTodos.filter(todo => !todo.completed);
+            const completedTodos = sectionTodos.filter(todo => todo.completed);
             
-            let html = '';
-            
-            // Render active main todos with all their subtasks (completed and active)
-            html += activeTodos.map(todo => {
-                return this.renderSingleTodo(todo, projectId, level);
-            }).join('');
-            
-            // Add separator and completed section if there are completed main todos
-            if (completedTodos.length > 0) {
-                html += `
-                    <div class="completed-section">
-                        <div class="completed-header" onclick="app.toggleCompletedSection()" style="cursor: pointer;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="completed-toggle-icon">
-                                <polyline points="9,18 15,12 9,6"></polyline>
-                            </svg>
-                            <span>Erledigt (${completedTodos.length})</span>
+            // Always show sections, even if empty
+            html += `
+                <div class="section-container">
+                    <div class="section-header" onclick="app.toggleSection('${projectId}', '${section.id}')" style="cursor: pointer;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-toggle-icon ${section.collapsed ? 'collapsed' : ''}">
+                            <polyline points="9,18 15,12 9,6"></polyline>
+                        </svg>
+                        <span class="section-name">${section.name}</span>
+                        <span class="section-count">(${sectionTodos.length})</span>
+                        <div class="section-actions">
+                            <button class="btn-small btn-edit-section" onclick="event.stopPropagation(); app.showEditSectionForm('${projectId}', '${section.id}')" title="Bereich bearbeiten">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-small btn-delete-section" onclick="event.stopPropagation(); app.showDeleteSectionModal('${projectId}', '${section.id}')" title="Bereich löschen">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path></svg>
+                            </button>
                         </div>
-                        <div class="completed-todos" id="completed-todos-${projectId}">
-                `;
-                
-                // Render completed main todos with all their subtasks (completed and active)
-                html += completedTodos.map(todo => {
+                    </div>
+                    <div class="section-content" id="section-content-${projectId}-${section.id}" style="display: ${section.collapsed ? 'none' : 'block'}">
+            `;
+            
+            // Render active todos in section (completed todos automatically go to archive)
+            if (activeTodos.length > 0) {
+                html += activeTodos.map(todo => {
                     return this.renderSingleTodo(todo, projectId, level);
                 }).join('');
-                
-                html += `
-                        </div>
-                    </div>
-                `;
+            } else if (sectionTodos.length === 0) {
+                html += '<div class="no-todos">Noch keine Todos in diesem Bereich</div>';
             }
             
-            return html;
-        } else {
-            // Für Subtasks (level > 0): Render alle Subtasks zusammen, ohne Trennung
-            return todos.map(todo => {
-                return this.renderSingleTodo(todo, projectId, level);
-            }).join('');
-        }
-    }
-
-    renderSingleTodo(todo, projectId, level) {
-        const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
-        const isCollapsed = todo.collapsed || false;
-        const marginLeft = level * 20;
+            html += `
+                    </div>
+                </div>
+            `;
+        });
         
-        let html = `
-            <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''} ${hasSubtasks && !isCollapsed ? 'has-visible-subtasks' : ''}" 
-                 data-todo-id="${todo.id}" data-project-id="${projectId}" 
-                 style="padding-left: ${marginLeft + 12}px">
-                <div class="todo-main-content">
-                    <div class="drag-handle" 
-                         draggable="true" 
-                         onmousedown="app.handleDragStart(event)" 
-                         ondragstart="app.handleDragStart(event)" 
-                         ondragend="app.handleDragEnd(event)" 
-                         title="Zum Verschieben ziehen">
-                        <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="3" cy="3" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="3" r="1" fill="currentColor"/>
-                            <circle cx="3" cy="8" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="8" r="1" fill="currentColor"/>
-                            <circle cx="3" cy="13" r="1" fill="currentColor"/>
-                            <circle cx="9" cy="13" r="1" fill="currentColor"/>
-                        </svg>
-                    </div>
-                    ${hasSubtasks ? `
-                        <button class="subtask-toggle" onclick="app.toggleSubtaskCollapse('${projectId}', '${todo.id}')" title="${isCollapsed ? 'Aufklappen' : 'Zuklappen'}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${isCollapsed ? 0 : 90}deg); transition: transform 0.3s ease;">
-                                <polyline points="9,18 15,12 9,6"></polyline>
-                            </svg>
+        // Add button to create new section
+        html += `
+            <div class="add-section-container">
+                <button class="btn-add-section" onclick="app.showAddSectionForm('${projectId}')" title="Neuen Bereich hinzufügen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Neuen Bereich hinzufügen
+                </button>
+                <div id="add-section-form-${projectId}" class="add-section-form" style="display: none;">
+                    <input type="text" id="section-name-input-${projectId}" placeholder="Bereichsname eingeben..." class="section-input">
+                    <div class="form-actions">
+                        <button onclick="app.submitSection('${projectId}')" class="btn-confirm" title="Erstellen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
                         </button>
-                    ` : '<div class="subtask-spacer"></div>'}
-                    
-                    <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
-                           ${todo.completed ? 'checked' : ''} 
-                           onchange="app.toggleTodo('${projectId}', '${todo.id}')">
-                    <div class="todo-content">
-                        <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
-                        ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
-                    </div>
-                    <div class="todo-actions">
-                        ${level < 3 ? `
-                            <button class="btn-small btn-add-subtask" onclick="app.showAddSubtaskForm('${projectId}', '${todo.id}')" title="Unter-Aufgabe hinzufügen">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M8 6h13"></path>
-                                    <path d="M8 12h13"></path>
-                                    <path d="M8 18h13"></path>
-                                    <path d="M3 6h.01"></path>
-                                    <path d="M3 12h.01"></path>
-                                    <path d="M3 18h.01"></path>
-                                </svg>
-                            </button>
-                        ` : ''}
-                        <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="btn-small btn-delete" onclick="app.deleteTodo('${projectId}', '${todo.id}')" title="Löschen">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        <button onclick="app.hideAddSectionForm('${projectId}')" class="btn-cancel" title="Abbrechen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
                 </div>
             </div>
         `;
         
-        // Add subtasks if not collapsed (alle Subtasks zusammen, ohne Trennung)
-        if (hasSubtasks && !isCollapsed) {
-            html += this.renderTodoHierarchy(todo.subtasks, projectId, level + 1);
-        }
+        return html;
+    }
+
+    renderSingleTodo(todo, projectId, level = 0) {
+        let html = `
+            <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}" 
+                 data-todo-id="${todo.id}" data-project-id="${projectId}">
+                <div class="todo-main-content">
+                    <input type="checkbox" class="todo-checkbox priority-${todo.priority}" 
+                           ${todo.completed ? 'checked' : ''} 
+                           >
+                    <div class="todo-content">
+                        <span class="todo-text ${todo.completed ? 'completed' : ''}">${this.highlightSearchTerm(todo.text)}</span>
+                        ${todo.dueDate ? `<span class="todo-due-date ${this.isOverdue(todo.dueDate) && !todo.completed ? 'overdue' : ''}">📅 ${this.formatDueDate(todo.dueDate)}</span>` : ''}
+                    </div>
+                    <div class="todo-actions">
+                        <button class="btn-small btn-edit" onclick="app.showEditTodoForm('${projectId}', '${todo.id}')" title="Bearbeiten">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="btn-small btn-delete" onclick="app.showDeleteTodoModal('${projectId}', '${todo.id}')" title="Löschen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
         
         return html;
     }
@@ -993,9 +895,11 @@ class TodoApp {
     submitTodo(projectId) {
         const textInput = document.getElementById(`todo-text-${projectId}`);
         const dateInput = document.getElementById(`todo-date-${projectId}`);
+        const sectionSelect = document.getElementById(`todo-section-${projectId}`);
         
         const originalText = textInput.value.trim();
         const dueDate = dateInput.value ? new Date(dateInput.value) : null;
+        const selectedSection = sectionSelect ? sectionSelect.value : 'general';
         
         if (originalText) {
             // Parse Priorität aus dem Text
@@ -1004,17 +908,22 @@ class TodoApp {
             // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
             const finalPriority = parsedPriority || 'medium';
             
-            this.addTodo(projectId, text, finalPriority, dueDate);
+            this.addTodo(projectId, text, finalPriority, dueDate, selectedSection);
             // Nach dem Re-Rendering die neuen Elemente finden und Fokus setzen
             setTimeout(() => {
                 const newTextInput = document.getElementById(`todo-text-${projectId}`);
                 const newDateInput = document.getElementById(`todo-date-${projectId}`);
+                const newSectionSelect = document.getElementById(`todo-section-${projectId}`);
                 if (newTextInput) {
                     newTextInput.value = '';
                     newTextInput.focus();
                 }
                 if (newDateInput) {
                     newDateInput.value = '';
+                }
+                // Section dropdown behält den ausgewählten Wert bei
+                if (newSectionSelect) {
+                    newSectionSelect.value = selectedSection;
                 }
             }, 0);
         }
@@ -1083,55 +992,6 @@ class TodoApp {
         this.render();
     }
 
-    showAddSubtaskForm(projectId, parentId) {
-        // Create inline form for adding subtask
-        const parentElement = document.querySelector(`[data-todo-id="${parentId}"]`);
-        if (!parentElement) return;
-
-        // Check if form already exists
-        if (parentElement.querySelector('.add-subtask-form')) return;
-
-        const formHtml = `
-            <div class="add-subtask-form" style="margin-left: 40px; margin-top: 8px;">
-                <div class="subtask-input-row">
-                    <input type="text" id="subtask-text-${parentId}" placeholder="Unter-Aufgabe hinzufügen... (p1=hoch, p2=mittel, p3=niedrig)" class="subtask-input" autocomplete="off" autocorrect="off" spellcheck="false">
-                    <button onclick="app.submitSubtask('${projectId}', '${parentId}')" class="btn-small btn-confirm" title="Hinzufügen">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,11 12,14 22,4"></polyline><path d="m21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"></path></svg>
-                    </button>
-                    <button onclick="app.cancelAddSubtask('${parentId}')" class="btn-small btn-cancel" title="Abbrechen">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        parentElement.insertAdjacentHTML('afterend', formHtml);
-        document.getElementById(`subtask-text-${parentId}`).focus();
-    }
-
-    submitSubtask(projectId, parentId) {
-        const textInput = document.getElementById(`subtask-text-${parentId}`);
-        
-        const originalText = textInput.value.trim();
-        
-        if (originalText) {
-            // Parse Priorität aus dem Text
-            const { text, priority: parsedPriority } = this.parsePriorityFromText(originalText);
-            
-            // Verwende geparste Priorität, falls vorhanden, sonst Standard-Priorität
-            const finalPriority = parsedPriority || 'medium';
-            
-            this.addSubtask(projectId, parentId, text, finalPriority);
-            this.cancelAddSubtask(parentId);
-        }
-    }
-
-    cancelAddSubtask(parentId) {
-        const form = document.querySelector('.add-subtask-form');
-        if (form) {
-            form.remove();
-        }
-    }
 
     showAddProjectForm() {
         document.getElementById('add-project-form').style.display = 'flex';
@@ -1204,12 +1064,6 @@ class TodoApp {
                 this.submitTodo(projectId);
             }
             
-            // Event listener für Subtask-Eingabefelder
-            if (e.target.classList.contains('subtask-input') && e.key === 'Enter') {
-                const parentId = e.target.id.replace('subtask-text-', '');
-                const projectId = this.currentProjectId; // Use current project
-                this.submitSubtask(projectId, parentId);
-            }
             
             // Event listener für Edit-Todo-Eingabefelder
             if (e.target.classList.contains('edit-input') && e.key === 'Enter') {
@@ -1218,11 +1072,6 @@ class TodoApp {
                 this.saveEditTodo(projectId, todoId);
             }
             
-            // ESC zum Abbrechen von Subtask-Formularen
-            if (e.key === 'Escape' && e.target.classList.contains('subtask-input')) {
-                const parentId = e.target.id.replace('subtask-text-', '');
-                this.cancelAddSubtask(parentId);
-            }
             
             // ESC zum Abbrechen von Edit-Formularen
             if (e.key === 'Escape' && e.target.classList.contains('edit-input')) {
@@ -1262,14 +1111,6 @@ class TodoApp {
             }
         });
 
-        document.getElementById('archive-btn').addEventListener('click', () => {
-            this.closeDropdownMenu();
-            this.showArchiveModal();
-        });
-
-        document.getElementById('floating-archive-btn').addEventListener('click', () => {
-            this.showArchiveModal();
-        });
 
         document.getElementById('export-btn').addEventListener('click', () => {
             this.closeDropdownMenu();
@@ -1308,6 +1149,12 @@ class TodoApp {
         document.getElementById('clear-archive-modal').addEventListener('click', (e) => {
             if (e.target.id === 'clear-archive-modal') {
                 this.hideClearArchiveModal();
+            }
+        });
+
+        document.getElementById('delete-todo-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'delete-todo-modal') {
+                this.hideDeleteTodoModal();
             }
         });
 
@@ -1351,13 +1198,6 @@ class TodoApp {
             this.confirmImport();
         });
 
-        document.getElementById('archive-cancel').addEventListener('click', () => {
-            this.hideArchiveModal();
-        });
-
-        document.getElementById('archive-confirm').addEventListener('click', () => {
-            this.confirmArchive();
-        });
 
         document.getElementById('clear-archive-cancel').addEventListener('click', () => {
             this.hideClearArchiveModal();
@@ -1365,6 +1205,15 @@ class TodoApp {
 
         document.getElementById('clear-archive-confirm').addEventListener('click', () => {
             this.confirmClearArchive();
+        });
+
+        // Delete todo modal events
+        document.getElementById('delete-todo-cancel').addEventListener('click', () => {
+            this.hideDeleteTodoModal();
+        });
+
+        document.getElementById('delete-todo-confirm').addEventListener('click', () => {
+            this.confirmDeleteTodo();
         });
     }
 
@@ -1466,23 +1315,9 @@ class TodoApp {
         this.hideImportModal();
         this.hideArchiveModal();
         this.hideClearArchiveModal();
+        this.hideDeleteTodoModal();
     }
 
-    showArchiveModal() {
-        const completedMainTodosCount = this.countCompletedMainTodos();
-        if (completedMainTodosCount === 0) {
-            this.showToast('Keine erledigten Main-Todos zum Archivieren gefunden.', 'info');
-            return;
-        }
-        
-        document.getElementById('archive-count-text').textContent = 
-            `${completedMainTodosCount} erledigte Todo${completedMainTodosCount === 1 ? '' : 's'} werden in das Projekt "Archiv" verschoben.`;
-        document.getElementById('archive-modal').style.display = 'flex';
-    }
-
-    hideArchiveModal() {
-        document.getElementById('archive-modal').style.display = 'none';
-    }
 
     resetImportModal() {
         document.getElementById('file-input').value = '';
@@ -1790,45 +1625,10 @@ class TodoApp {
             if (todo.completed) {
                 count++;
             }
-            // Count completed subtasks recursively
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                count += this.countCompletedTodosInList(todo.subtasks);
-            }
         });
         return count;
     }
 
-    confirmArchive() {
-        const archiveProject = this.getOrCreateArchiveProject();
-        let movedCount = 0;
-
-        // Gehe durch alle Projekte und verschiebe erledigte Todos (außer Archiv)
-        this.projects.forEach(project => {
-            if (project.id === archiveProject.id || project.id === 'archive') return; // Skip das Archiv-Projekt selbst
-            
-            const completedTodos = project.todos.filter(todo => todo.completed);
-            const remainingTodos = project.todos.filter(todo => !todo.completed);
-            
-            // Füge erledigte Todos zum Archiv hinzu (am Anfang, damit neue oben stehen)
-            completedTodos.forEach(todo => {
-                // Füge Projektinformation zum Todo hinzu
-                todo.originalProject = project.name;
-                todo.archivedAt = new Date();
-                archiveProject.todos.unshift(todo); // unshift() fügt am Anfang hinzu
-                movedCount++;
-            });
-            
-            // Behalte nur die nicht erledigten Todos im ursprünglichen Projekt
-            project.todos = remainingTodos;
-        });
-
-        this.saveToStorage();
-        this.renderSidebar();
-        this.render();
-        this.hideArchiveModal();
-        
-        this.showToast(`${movedCount} erledigte Todo${movedCount === 1 ? '' : 's'} wurden ins Archiv verschoben.`);
-    }
 
     getOrCreateArchiveProject() {
         // Suche nach existierendem Archiv-Projekt
@@ -1881,221 +1681,190 @@ class TodoApp {
         this.showToast(`${todoCount} Todo${todoCount === 1 ? '' : 's'} aus dem Archiv gelöscht.`);
     }
 
-    toggleCompletedSection() {
-        console.log('toggleCompletedSection called, current state:', this.isCompletedSectionCollapsed);
-        this.isCompletedSectionCollapsed = !this.isCompletedSectionCollapsed;
-        localStorage.setItem('completedSectionCollapsed', this.isCompletedSectionCollapsed);
-        console.log('New state:', this.isCompletedSectionCollapsed);
-        this.updateCompletedSectionVisibility();
-    }
-
-    updateCompletedSectionVisibility() {
-        const completedSections = document.querySelectorAll('.completed-todos');
-        const toggleIcons = document.querySelectorAll('.completed-toggle-icon');
-        
-        console.log('updateCompletedSectionVisibility called');
-        console.log('Found completed sections:', completedSections.length);
-        console.log('Found toggle icons:', toggleIcons.length);
-        console.log('isCompletedSectionCollapsed:', this.isCompletedSectionCollapsed);
-        
-        completedSections.forEach(section => {
-            if (this.isCompletedSectionCollapsed) {
-                section.style.display = 'none';
-            } else {
-                section.style.display = 'block';
-            }
-        });
-        
-        toggleIcons.forEach(icon => {
-            if (this.isCompletedSectionCollapsed) {
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                icon.style.transform = 'rotate(90deg)';
-            }
-        });
-    }
-    
-    bindCompletedSectionEvents() {
-        const completedHeaders = document.querySelectorAll('.completed-header');
-        console.log('Binding events to completed headers:', completedHeaders.length);
-        
-        completedHeaders.forEach(header => {
-            // Remove existing event listeners
-            header.removeEventListener('click', this.toggleCompletedSection.bind(this));
-            // Add new event listener
-            header.addEventListener('click', this.toggleCompletedSection.bind(this));
-        });
-    }
     
     bindCheckboxEvents() {
         const checkboxes = document.querySelectorAll('.todo-checkbox');
-        console.log('Binding events to checkboxes:', checkboxes.length);
         
         checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
+            // Remove existing event listeners by cloning the element
+            const newCheckbox = checkbox.cloneNode(true);
+            checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+            
+            newCheckbox.addEventListener('change', (e) => {
                 e.stopPropagation();
-                const todoItem = checkbox.closest('.todo-item');
+                const todoItem = newCheckbox.closest('.todo-item');
                 const todoId = todoItem.dataset.todoId;
                 const projectId = todoItem.dataset.projectId;
-                console.log('Checkbox changed for todo:', todoId, 'in project:', projectId);
                 this.toggleTodo(projectId, todoId);
             });
         });
     }
 
-    handleDragStart(event) {
-        // Only allow drag if initiated from drag handle
-        if (!event.target.closest('.drag-handle')) {
-            event.preventDefault();
-            return false;
-        }
-        
-        const dragHandle = event.currentTarget;
-        const todoElement = dragHandle.closest('.todo-item');
-        
-        if (!todoElement) {
-            event.preventDefault();
-            return false;
-        }
-        
-        const todoId = todoElement.dataset.todoId;
-        const projectId = todoElement.dataset.projectId;
-        
-        // Store drag data
-        this.dragData = {
-            todoId: todoId,
-            sourceProjectId: projectId
-        };
-        
-        // Add visual feedback to the todo item
-        todoElement.classList.add('dragging');
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', todoId);
-        
-        // Create a custom drag image (optional)
-        const dragImage = todoElement.cloneNode(true);
-        dragImage.style.transform = 'scale(0.8)';
-        dragImage.style.opacity = '0.8';
-        document.body.appendChild(dragImage);
-        event.dataTransfer.setDragImage(dragImage, 0, 0);
-        setTimeout(() => document.body.removeChild(dragImage), 0);
-    }
-
-    handleDragEnd(event) {
-        const dragHandle = event.currentTarget;
-        const todoElement = dragHandle.closest('.todo-item');
-        
-        if (todoElement) {
-            todoElement.classList.remove('dragging');
-        }
-        
-        // Remove drag feedback from all elements
-        document.querySelectorAll('.project-item').forEach(item => {
-            item.classList.remove('drag-over');
+    bindSectionKeyboardEvents() {
+        // Bind Enter key to section input forms
+        document.querySelectorAll('.section-input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const projectId = input.id.replace('section-name-input-', '');
+                    this.submitSection(projectId);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    const projectId = input.id.replace('section-name-input-', '');
+                    this.hideAddSectionForm(projectId);
+                }
+            });
         });
-        
-        // Clear drag data
-        this.dragData = null;
     }
 
-    handleDragOver(event) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-    }
-
-    handleDragEnter(event) {
-        event.preventDefault();
-        if (this.dragData) {
-            const projectItem = event.currentTarget;
-            projectItem.classList.add('drag-over');
+    // Section Management Functions
+    toggleSection(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project) {
+            const section = project.sections.find(s => s.id === sectionId);
+            if (section) {
+                section.collapsed = !section.collapsed;
+                this.saveToStorage();
+                
+                // Update UI
+                const sectionContent = document.getElementById(`section-content-${projectId}-${sectionId}`);
+                const toggleIcon = sectionContent.parentElement.querySelector('.section-toggle-icon');
+                
+                if (section.collapsed) {
+                    sectionContent.style.display = 'none';
+                    toggleIcon.classList.add('collapsed');
+                } else {
+                    sectionContent.style.display = 'block';
+                    toggleIcon.classList.remove('collapsed');
+                }
+            }
         }
     }
 
-    handleDragLeave(event) {
-        const projectItem = event.currentTarget;
-        // Only remove if really leaving the element
-        if (!projectItem.contains(event.relatedTarget)) {
-            projectItem.classList.remove('drag-over');
+    showAddSectionForm(projectId) {
+        const form = document.getElementById(`add-section-form-${projectId}`);
+        const input = document.getElementById(`section-name-input-${projectId}`);
+        
+        if (form) {
+            form.style.display = 'block';
+            input.focus();
         }
     }
 
-    handleDrop(event, targetProjectId) {
-        event.preventDefault();
-        const projectItem = event.currentTarget;
-        projectItem.classList.remove('drag-over');
+    hideAddSectionForm(projectId) {
+        const form = document.getElementById(`add-section-form-${projectId}`);
+        const input = document.getElementById(`section-name-input-${projectId}`);
         
-        if (!this.dragData || !targetProjectId) return;
-        
-        const { todoId, sourceProjectId } = this.dragData;
-        
-        // Don't do anything if dropping on the same project
-        if (sourceProjectId === targetProjectId) return;
-        
-        // Don't allow dropping into archive project from UI
-        if (targetProjectId === 'archive') return;
-        
-        this.moveTodoToProject(todoId, sourceProjectId, targetProjectId);
+        if (form) {
+            form.style.display = 'none';
+            input.value = '';
+        }
     }
 
-    moveTodoToProject(todoId, sourceProjectId, targetProjectId) {
-        const sourceProject = this.projects.find(p => p.id === sourceProjectId);
-        const targetProject = this.projects.find(p => p.id === targetProjectId);
+    submitSection(projectId) {
+        const input = document.getElementById(`section-name-input-${projectId}`);
+        const name = input.value.trim();
         
-        if (!sourceProject || !targetProject) {
-            console.error('Source or target project not found');
-            return;
+        if (name) {
+            this.addSection(projectId, name);
+            this.hideAddSectionForm(projectId);
         }
-        
-        // Find and remove the todo from source project
-        const todo = this.findAndRemoveTodo(sourceProject, todoId);
-        if (!todo) {
-            console.error('Todo not found in source project');
-            return;
-        }
-        
-        // Add todo to target project
-        targetProject.todos.push(todo);
-        
-        this.saveToStorage();
-        this.renderSidebar();
-        this.render();
-        
-        // Show success message
-        this.showToast(`Todo zu "${targetProject.name}" verschoben`, 'success');
     }
 
-    findAndRemoveTodo(project, todoId) {
-        // Check main todos
-        const mainTodoIndex = project.todos.findIndex(t => t.id === todoId);
-        if (mainTodoIndex !== -1) {
-            return project.todos.splice(mainTodoIndex, 1)[0];
+    addSection(projectId, name) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project) {
+            const section = {
+                id: Date.now().toString(),
+                name: name,
+                collapsed: false
+            };
+            project.sections.push(section);
+            this.saveToStorage();
+            this.render();
         }
-        
-        // Check subtasks recursively
-        for (let todo of project.todos) {
-            const foundTodo = this.findAndRemoveFromSubtasks(todo, todoId);
-            if (foundTodo) return foundTodo;
-        }
-        
-        return null;
     }
 
-    findAndRemoveFromSubtasks(todo, todoId) {
-        if (!todo.subtasks) return null;
+    showEditSectionForm(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        const section = project?.sections.find(s => s.id === sectionId);
         
-        const subtaskIndex = todo.subtasks.findIndex(st => st.id === todoId);
-        if (subtaskIndex !== -1) {
-            return todo.subtasks.splice(subtaskIndex, 1)[0];
+        if (section) {
+            const sectionNameSpan = document.querySelector(`#section-content-${projectId}-${sectionId}`).parentElement.querySelector('.section-name');
+            const currentName = section.name;
+            
+            sectionNameSpan.innerHTML = `<input type="text" id="edit-section-input-${sectionId}" value="${currentName}" class="section-edit-input" style="background: transparent; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; font-size: inherit;">`;
+            
+            const input = document.getElementById(`edit-section-input-${sectionId}`);
+            input.focus();
+            input.select();
+            
+            const handleSave = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    section.name = newName;
+                    this.saveToStorage();
+                }
+                sectionNameSpan.textContent = newName || currentName;
+                input.removeEventListener('blur', handleSave);
+                input.removeEventListener('keypress', handleKeyPress);
+            };
+            
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    handleSave();
+                } else if (e.key === 'Escape') {
+                    sectionNameSpan.textContent = currentName;
+                    input.removeEventListener('blur', handleSave);
+                    input.removeEventListener('keypress', handleKeyPress);
+                }
+            };
+            
+            input.addEventListener('blur', handleSave);
+            input.addEventListener('keypress', handleKeyPress);
         }
-        
-        // Search in nested subtasks
-        for (let subtask of todo.subtasks) {
-            const foundTodo = this.findAndRemoveFromSubtasks(subtask, todoId);
-            if (foundTodo) return foundTodo;
-        }
-        
-        return null;
     }
+
+    showDeleteSectionModal(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        const section = project?.sections.find(s => s.id === sectionId);
+        
+        if (section && section.id !== 'general') {
+            const todosInSection = project.todos.filter(todo => todo.section === sectionId);
+            
+            if (todosInSection.length > 0) {
+                const confirmMove = confirm(`Der Bereich "${section.name}" enthält ${todosInSection.length} Todo(s). Diese werden in den Bereich "Allgemein" verschoben. Fortfahren?`);
+                if (confirmMove) {
+                    this.deleteSection(projectId, sectionId);
+                }
+            } else {
+                const confirmDelete = confirm(`Soll der Bereich "${section.name}" wirklich gelöscht werden?`);
+                if (confirmDelete) {
+                    this.deleteSection(projectId, sectionId);
+                }
+            }
+        }
+    }
+
+    deleteSection(projectId, sectionId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (project && sectionId !== 'general') {
+            // Move todos to general section
+            project.todos.forEach(todo => {
+                if (todo.section === sectionId) {
+                    todo.section = 'general';
+                }
+            });
+            
+            // Remove section
+            project.sections = project.sections.filter(s => s.id !== sectionId);
+            
+            this.saveToStorage();
+            this.render();
+        }
+    }
+
 }
 
-const app = new TodoApp();
+// Make app globally available for onclick handlers
+window.app = new TodoApp();
